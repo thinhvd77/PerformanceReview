@@ -42,11 +42,10 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "name": {"type": "string"},
-                  "email": {"type": "string", "format": "email"},
+                  "username": {"type": "string"},
                   "password": {"type": "string", "format": "password"}
                 },
-                "required": ["name", "email", "password"]
+                "required": ["username", "password"]
               }
             }
           }
@@ -68,10 +67,10 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "email": {"type": "string", "format": "email"},
+                  "username": {"type": "string"},
                   "password": {"type": "string", "format": "password"}
                 },
-                "required": ["email", "password"]
+                "required": ["username", "password"]
               }
             }
           }

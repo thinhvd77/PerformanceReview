@@ -32,21 +32,42 @@ const SECTION_OPTIONS = {
         {label: 'Các công việc khác theo chức năng, nhiệm vụ được cấp trên phân công', value: 'II-5'},
     ],
     III: [
-        {label: 'Khen thưởng quý', value: 'III-1'},
-        {label: 'Khen thưởng đột xuất', value: 'III-2'},
+        {label: 'Điểm cộng (tối đa 10 điểm)', value: 'III-1'},
+        {label: 'Chỉ tiêu nguồn vốn vượt KH Quý được giao', value: 'III-2'}, // Cứ vượt 5% +1 điểm, Max 05 điểm
+        {label: 'Chỉ tiêu dư nợ vượt KH Quý được giao', value: 'III-3'}, // Cứ vượt 5% +1 điểm, Max 05 điểm
+        {label: 'Chỉ tiêu thu dịch vụ vượt KH Quý được giao', value: 'III-4'}, // Cứ vượt 3% +1 điểm, Max 05 điểm
+        {label: 'Thu hồi nợ đã XLRR đạt từ 110% KH Quý', value: 'III-5'}, // Cộng 3 điểm
+        {label: 'Số tuyệt đối nợ nhóm 2 giảm so với Quý trước', value: 'III-6'}, // Cộng 1 điểm
+        {label: 'Số tuyệt đối nợ xấu giảm so với Quý trước', value: 'III-7'}, // Cộng 2 điểm
+        {label: 'Phát triển được 01 đơn vị trả lương qua tài khoản', value: 'III-8'}, // Cộng 3 điểm/1 đơn vị
+        {label: 'Tỷ lệ CASA BQ trong Quý tăng từ 1% trở lên so với thực hiện Quý trước', value: 'III-9'}, // Cộng 2 điểm
+        {label: 'Phát triển được 01 đơn vị mới sử dụng dịch vụ TTQT (không bao gồm KH của đơn vị/phòng nghiệp vụ khác chuyển lên)', value: 'III-10'}, // Cộng 2 điểm/1 đơn vị
+        {label: 'Phát triển được 01 đơn vị mới sử dụng dịch vụ bảo lãnh (không bao gồm KH của đơn vị/phòng nghiệp vụ khác chuyển lên)', value: 'III-11'}, // Cộng 1 điểm/đơn vị
+        {label: 'Thu ròng từ kinh doanh ngoại tệ đạt từ 150% so với Quý trước liền kề', value: 'III-12'}, // Cộng 2 điểm
+        {label: 'Chỉ tiêu tiếp thị tín dụng (chỉ tiêu cá nhân) vượt kế hoạch Quý được giao', value: 'III-13'}, // Cứ vượt 10% + 1 điểm, Max 5 điểm
     ],
     IV: [
-        {label: 'Vi phạm quy định', value: 'IV-1'},
-        {label: 'Đi muộn/ về sớm', value: 'IV-2'},
+        {label: 'Điểm trừ (tối đa 10 điểm)', value: 'IV-1'},
+        {label: 'Khoản cho vay có liên quan phát sinh trích lập DPCT trong Quý', value: 'IV-2'},
+        {label: 'Tỷ lệ nợ nhóm 2 tăng trong Quý', value: 'IV-3'}, // Trừ 1 điểm
+        {label: 'Tỷ lệ nợ xấu tăng trong Quý', value: 'IV-4'}, // Trừ 2 điểm
+        {label: 'Nguồn vốn giảm so với số thực hiện Quý trước (không nằm trong kế hoạch)', value: 'IV-5'}, //Cứ giảm 5% -1 điểm, Max 5 điểm
+        {label: 'Dư nợ giảm so với số thực hiện Quý trước (loại trừ giảm do XLRR)', value: 'IV-6'}, // Cứ giảm 5% -1 điểm, Max 5 điểm
+        {label: 'Tồn tại, sai sót qua thanh tra, kiểm tra, kiểm toán phát sinh trong Quý', value: 'IV-7'}, // -2 điểm/mỗi biên bản kết luận có tồn tại sai sót
+        {label: 'Kết quả kiểm tra kiến thức: Kết quả thi dưới TB/không đạt yêu cầu', value: 'IV-8'}, // -5 điểm
     ],
     V: [
-        {label: 'Đạt giải thi đua', value: 'V-1'},
-        {label: 'Đóng góp cộng đồng', value: 'V-2'},
+        {label: 'Điểm thưởng (tối đa 05 điểm)', value: 'V-1'},
+        {label: 'Một trong số các chỉ tiêu: Dư nợ, nguồn vốn hoàn thành KH năm được giao', value: 'V-2'}, // Thưởng 03 điểm/mỗi chỉ tiêu tại Quý hoàn thành
+        {label: 'Một trong số các chỉ tiêu: thu dịch vụ, thu hồi nợ đã XLRR, tài chính hoàn thành KH năm được giao', value: 'V-3'}, // Thưởng 05 điểm tại Quý hoàn thành
+        {label: 'Có sáng kiến, giải pháp, cách làm hay đem lại hiệu quả công việc, nâng cao năng suất lao động tại đơn vị được Hội đồng thi đua tại Chi nhánh công nhận', value: 'V-4'}, // Thưởng 03 điểm/mỗi sáng kiến
+        {label: 'Đạt thành tích trong các cuộc thi nghiệp vụ do Agribank hoặc chi nhánh tổ chức', value: 'V-5'}, // Nhất: 5 điểm; Nhì: 4 điểm; Ba: 3 điểm
     ],
 };
 
-export default function FormViewer() {
-    const {id} = useParams();
+export default function FormViewer({ formId }) {
+    const { id: routeId } = useParams();
+    const id = formId ?? routeId;
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [template, setTemplate] = useState(null);
@@ -180,7 +201,11 @@ export default function FormViewer() {
                 cellInputs,
                 computedByAddr,
                 fileName: `Phieu_tu_danh_gia_${new Date().toISOString().slice(0, 10)}.xlsx`,
-                title: 'BẢNG TỰ ĐÁNH GIÁ MỨC ĐỘ HOÀN THÀNH CÔNG VIỆC'
+                title: 'BẢNG TỰ ĐÁNH GIÁ MỨC ĐỘ HOÀN THÀNH CÔNG VIỆC',
+                protectSheet: true,
+                protectPassword: 'Admin@6421',
+                readOnly: true,
+                allowResizeForPrint: true,
             });
         } catch (e) {
             console.error(e);

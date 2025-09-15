@@ -13,55 +13,10 @@ body {
   background-color: #f5f5f5;
 }
 
-.App {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
-}
-
-.error {
-  color: #ff0000;
-  margin: 10px 0;
-}
-
-form {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  max-width: 400px;
-  margin: 0 auto;
-}
-
-input {
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 16px;
-}
-
-button {
-  padding: 10px 20px;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 16px;
-}
-
-button:hover {
-  background-color: #0056b3;
-}
-
-button:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
-}
-
-.post-item {
-  background: white;
-  padding: 20px;
-  margin-bottom: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+html, body, #root {
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
 }
