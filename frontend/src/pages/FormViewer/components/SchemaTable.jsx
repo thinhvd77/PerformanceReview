@@ -20,6 +20,9 @@ export default function SchemaTable({
                                         sectionOptions = {},
                                         onSectionChoose,
                                         selectValueByRow = {},
+                                        scoreColIdx,
+                                        childAddrToParentRow = {},
+                                        onRemoveChild,
                                     }) {
     if (!table || !table.columns || table.columns.length === 0 || !table.rows || table.rows.length === 0) {
         return null;
@@ -54,6 +57,10 @@ export default function SchemaTable({
                     {table.rows.map((row, rIdx) => {
                         const roman = row?.cells?.[0]?.value; // cột STT (A)
                         const isRomanRow = isRoman(roman);
+                        // Dòng con: có ô điểm (cột score) là input và addr thuộc map childAddrToParentRow
+                        const scoreCell = (row?.cells || [])[scoreColIdx];
+                        const childScoreAddr = (scoreCell && scoreCell.input && scoreCell.addr) ? scoreCell.addr : null;
+                        const isChildRow = !!(childScoreAddr && (childAddrToParentRow[childScoreAddr] !== undefined));
                         return (
                             <tr key={`r-${rIdx}`}>
                                 {(row.cells || []).map((cell, cIdx) => {
@@ -107,7 +114,19 @@ export default function SchemaTable({
                                                     onChange={(e) => addr && onCellChange && onCellChange(addr, e.target.value)}
                                                 />
                                             ) : (
-                                                displayVal
+                                                isChildRow && isCriteriaColumn ? (
+                                                    <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8}}>
+                                                        <span>{displayVal}</span>
+                                                        <a
+                                                            style={{color: '#cf1322', cursor: 'pointer', whiteSpace: 'nowrap'}}
+                                                            onClick={() => onRemoveChild && childScoreAddr && onRemoveChild(rIdx, childScoreAddr)}
+                                                        >
+                                                            Xóa
+                                                        </a>
+                                                    </div>
+                                                ) : (
+                                                    displayVal
+                                                )
                                             )}
                                         </td>
                                     );

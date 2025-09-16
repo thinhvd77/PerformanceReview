@@ -7,7 +7,7 @@ const userRepository = AppDataSource.getRepository(User);
 
 export const register = async (req, res) => {
     try {
-        const {username, password, role} = req.body;
+        const {username, password, role, fullname} = req.body;
 
         // Check if user exists
         const existingUser = await userRepository.findOne({
@@ -25,14 +25,15 @@ export const register = async (req, res) => {
         const user = userRepository.create({
             username,
             password: hashedPassword,
-            role
+            role,
+            fullname,
         });
 
         await userRepository.save(user);
 
         res.status(201).json({
             message: 'User created successfully',
-            user: {id: user.id, username: user.username},
+            user: {id: user.id, username: user.username, fullname: user.fullname, role: user.role},
         });
     } catch (error) {
         res.status(500).json({message: 'Server error', error: error.message});
@@ -67,7 +68,7 @@ export const login = async (req, res) => {
         res.json({
             message: 'Login successful',
             token,
-            user: {id: user.id, username: user.username, role: user.role},
+            user: {id: user.id, username: user.username, fullname: user.fullname, role: user.role},
         });
     } catch (error) {
         res.status(500).json({message: 'Server error', error: error.message});
@@ -78,7 +79,7 @@ export const getProfile = async (req, res) => {
     try {
         const user = await userRepository.findOne({
             where: {id: req.user.id},
-            select: ['id', 'username', 'role', 'createdAt'],
+            select: ['id', 'username', 'fullname', 'role', 'createdAt'],
         });
 
         if (!user) {

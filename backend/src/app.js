@@ -73,6 +73,7 @@ AppDataSource.initialize()
             const adminData = {
                 id: '99999999',
                 username: 'admin',
+                fullname: 'Administrator',
                 role: 'Admin',
                 password: await bcrypt.hash('admin123', 10),
             };

@@ -1,18 +1,17 @@
 import React, {useEffect, useMemo, useRef, useState} from 'react';
-import {Card, Typography, Row, Col, Select, Button, Space, List, Tag, message, Empty, Spin, Badge} from 'antd';
-import {SearchOutlined, ReloadOutlined, ArrowLeftOutlined} from '@ant-design/icons';
+import {Card, Typography, Row, Col, Select, Button, Space, List, Tag, message, Empty, Spin, Layout} from 'antd';
 import {useNavigate} from 'react-router-dom';
 import api from '../../services/api';
 import {orgData, findNameById} from '../../data/orgData';
 import LogoutButton from '../../components/LogoutButton';
 import UserInfo from '../../components/UserInfo';
-import bg from '../../components/lg_bg.jpg';
 import FormViewer from '../FormViewer/FormViewer';
+import logo from "../../components/logo_png.png";
 
+const {Content, Header} = Layout;
 const {Title, Text} = Typography;
 
 export default function UserFormPicker() {
-    const navigate = useNavigate();
     const [branchId, setBranchId] = useState();
     const [departmentId, setDepartmentId] = useState();
     const [positionId, setPositionId] = useState();
@@ -28,23 +27,23 @@ export default function UserFormPicker() {
     const positions = useMemo(() => (departmentId ? orgData.positions[departmentId] || [] : []), [departmentId]);
 
     // Load last selection
-    useEffect(() => {
-        try {
-            const b = localStorage.getItem('ufp.branchId') || undefined;
-            const d = localStorage.getItem('ufp.departmentId') || undefined;
-            const p = localStorage.getItem('ufp.positionId') || undefined;
-            if (b && (orgData.branches || []).some(x => x.id === b)) {
-                setBranchId(b);
-                if (d && (orgData.departments[b] || []).some(x => x.id === d)) {
-                    setDepartmentId(d);
-                    if (p && (orgData.positions[d] || []).some(x => x.id === p)) {
-                        setPositionId(p);
-                    }
-                }
-            }
-        } catch {
-        }
-    }, []);
+    // useEffect(() => {
+    //     try {
+    //         const b = localStorage.getItem('ufp.branchId') || undefined;
+    //         const d = localStorage.getItem('ufp.departmentId') || undefined;
+    //         const p = localStorage.getItem('ufp.positionId') || undefined;
+    //         if (b && (orgData.branches || []).some(x => x.id === b)) {
+    //             setBranchId(b);
+    //             if (d && (orgData.departments[b] || []).some(x => x.id === d)) {
+    //                 setDepartmentId(d);
+    //                 if (p && (orgData.positions[d] || []).some(x => x.id === p)) {
+    //                     setPositionId(p);
+    //                 }
+    //             }
+    //         }
+    //     } catch {
+    //     }
+    // }, []);
 
     // Persist selection
     useEffect(() => {
@@ -65,7 +64,7 @@ export default function UserFormPicker() {
         setSelectedFormId(null);
         setResults([]);
         try {
-            const res = await api.get('/forms', { params: { branchId, departmentId, positionId } });
+            const res = await api.get('/forms', {params: {branchId, departmentId, positionId}});
             const items = res.data || [];
             if (items.length === 1) {
                 setSelectedFormId(items[0].id);
@@ -128,62 +127,63 @@ export default function UserFormPicker() {
         setSelectedFormId(null);
     };
 
-    const onReset = () => {
-        setBranchId(undefined);
-        setDepartmentId(undefined);
-        setPositionId(undefined);
-        setResults([]);
-        setSearched(false);
-        setSelectedFormId(null);
-    };
-
-    const selectCommonProps = {
-        style: {width: '100%'},
-        showSearch: true,
-        allowClear: true,
-        optionFilterProp: 'label',
-        filterSort: (a, b) => (a?.label || '').localeCompare(b?.label || ''),
-    };
-
     return (
         <div
             style={{
                 minHeight: '100vh',
-                padding: 24,
                 display: 'flex',
+                flexDirection: 'column',
             }}
         >
-            <Space direction="vertical" size="large" style={{width: '100%', maxWidth: 960, margin: '0 auto'}}>
-                <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
-                    <div>
-                        <Title level={2} style={{marginBottom: 0}}>Find Your Form</Title>
-                        <Text type="secondary">Select your Branch, Department and Position to get the corresponding
-                            form.</Text>
+            <Header style={{
+                background: 'rgb(174, 28, 63)',
+                padding: '5px 24px',
+                borderBottom: '1px solid #f0f0f0',
+                display: 'flex',
+                width: '100%',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                boxSizing: 'border-box',
+            }}>
+                <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%'
+                }}>
+                    <div style={{width: '15%', height: '100%'}}>
+                        <img src={logo} style={{height: '100%', width: 'auto'}} alt={'logo'}/>
                     </div>
-                    <Space size="large">
-                        <UserInfo />
-                        <LogoutButton size="small"/>
+                    <Title level={1} style={{margin: 0, marginLeft: 'auto', marginRight: 'auto', color: 'white', width:'75%', display: 'flex', alignItems: 'center', justifyContent:'center', fontSize: 'clamp(10px, 1vw, 22px)', lineHeight: 1.1}}>BẢNG TỰ ĐÁNH GIÁ MỨC ĐỘ HOÀN THÀNH CÔNG VIỆC</Title>
+                    <Space size="large" style={{width: '15%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'flex-end'}}>
+                        <UserInfo/>
+                        <LogoutButton confirm size="small"/>
                     </Space>
                 </div>
-
+            </Header>
+            <Space direction="vertical" size="large" style={{width: '100%', maxWidth: 1200, margin: '5px auto 0 auto'}}>
+                <Title level={3} style={{margin: '5px 0 0 0'}}>Cán bộ chọn đúng Chi nhánh, Phòng ban, Chức vụ để lấy form đánh giá chính xác</Title>
                 <Card>
                     <Row gutter={[12, 12]}>
                         <Col xs={24} md={8}>
+                            <label style={{display: 'block', marginBottom: 8, fontSize: '16px', fontWeight:'600'}}>Chi nhánh</label>
                             <Select
-                                {...selectCommonProps}
-                                placeholder="Branch"
+                                style={{width: '100%'}}
+                                size={'large'}
+                                placeholder="-- Chọn chi nhánh --"
                                 aria-label="Select Branch"
+                                showSearch={false}
                                 value={branchId}
                                 onChange={handleBranchChange}
                                 options={(orgData.branches || []).map(b => ({value: b.id, label: b.name}))}
                             />
                         </Col>
                         <Col xs={24} md={8}>
+                            <label style={{display: 'block', marginBottom: 8, fontSize: '16px', fontWeight:'600'}}>Phòng ban</label>
                             <Select
-                                {...selectCommonProps}
-                                placeholder="Department"
+                                style={{width: '100%'}}
+                                size={'large'}
+                                placeholder="-- Chọn phòng ban --"
                                 aria-label="Select Department"
                                 value={departmentId}
+                                showSearch={false}
                                 onChange={handleDeptChange}
                                 options={departments.map(d => ({value: d.id, label: d.name}))}
                                 disabled={!branchId}
@@ -191,11 +191,15 @@ export default function UserFormPicker() {
                             />
                         </Col>
                         <Col xs={24} md={8}>
+                            <label style={{display: 'block', marginBottom: 8, fontSize: '16px', fontWeight:'600'}}>Chức vụ</label>
                             <Select
-                                {...selectCommonProps}
-                                placeholder="Position"
+                                style={{width: '100%'}}
+                                size={'large'}
+                                placeholder="-- Chọn chức vụ --"
                                 aria-label="Select Position"
                                 value={positionId}
+                                showSearch={false}
+                                allowClear={false}
                                 onChange={handlePosChange}
                                 options={positions.map(p => ({value: p.id, label: p.name}))}
                                 disabled={!departmentId}
@@ -203,26 +207,16 @@ export default function UserFormPicker() {
                             />
                         </Col>
                     </Row>
-
-                    <Space style={{marginTop: 16}}>
-                        <Button icon={<ReloadOutlined/>} onClick={onReset} disabled={loading}>Reset</Button>
-                    </Space>
                 </Card>
 
-                <Card
-                    title={
-                        <Space>
-                            <Title level={5} style={{margin: 0}}>Matching Forms</Title>
-                            <Badge count={results.length} overflowCount={99} style={{backgroundColor: '#52c41a'}}/>
-                        </Space>
-                    }
+                <Card style={{padding: 0}}
                 >
                     {selectedFormId ? (
                         <div>
-                            <FormViewer formId={selectedFormId} />
+                            <FormViewer formId={selectedFormId}/>
                         </div>
                     ) : loading ? (
-                        <div style={{display: 'flex', justifyContent: 'center', padding: '24px 0'}}>
+                        <div style={{display: 'flex', justifyContent: 'center', padding: '0'}}>
                             <Spin/>
                         </div>
                     ) : results.length > 0 ? (

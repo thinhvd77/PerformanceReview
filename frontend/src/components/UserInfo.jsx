@@ -1,28 +1,28 @@
-import React, { useEffect, useState } from 'react';
-import { Typography } from 'antd';
-import { authService } from '../services/authService';
+import React, {useEffect, useState} from 'react';
+import {Typography} from 'antd';
+import {authService} from '../services/authService';
 
-const { Text } = Typography;
+const {Text} = Typography;
 
-export default function UserInfo({ size = 'small' }) {
-  const [user, setUser] = useState(() => authService.getCurrentUser());
+export default function UserInfo({size = 'small'}) {
+    const [user, setUser] = useState(() => authService.getCurrentUser());
 
-  useEffect(() => {
-    // In case we later want to refresh from profile
-    // Keep minimal: rely on localStorage for now
-    const onStorage = () => setUser(authService.getCurrentUser());
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
-  }, []);
+    useEffect(() => {
+        // In case we later want to refresh from profile
+        // Keep minimal: rely on localStorage for now
+        const onStorage = () => setUser(authService.getCurrentUser());
+        window.addEventListener('storage', onStorage);
+        return () => window.removeEventListener('storage', onStorage);
+    }, []);
 
-  if (!user) return null;
+    if (!user) return null;
 
-  const role = (user.role || '').toString();
-  const roleLabel = role ? `(${role})` : '';
+    const role = (user.role || '').toString();
+    const name = user.fullname || user.username || '';
 
-  return (
-    <Text type="secondary" style={{ whiteSpace: 'nowrap' }} size={size}>
-      Signed in as <Text strong>{user.username}</Text> {roleLabel}
-    </Text>
-  );
+    return (
+        <Text type="secondary" style={{whiteSpace: 'nowrap', color: 'white'}} size={size}>
+            <Text strong style={{color: 'white'}}>{name}</Text>
+        </Text>
+    );
 }

@@ -19,6 +19,8 @@ import {
 import SchemaTable from './components/SchemaTable';
 import {buildInitialInputs, buildCellMap, computeComputedByAddr} from './utils/formulaEngine';
 import exportFormExcel from './utils/exportFormExcel';
+import { authService } from '../../services/authService';
+import { orgData, findNameById } from '../../data/orgData';
 
 const {Title} = Typography;
 
@@ -137,6 +139,14 @@ export default function FormViewer({ formId }) {
     const [virtualRowNo, setVirtualRowNo] = useState(1000);
     // Lưu các địa chỉ ô-điểm (G*) của các dòng con theo từng dòng La Mã
     const [childrenScoreAddrs, setChildrenScoreAddrs] = useState({}); // { [sectionRowIndex]: string[] }
+    // Bản đồ ngược: addr điểm con -> index dòng cha (II/III/IV/V)
+    const childAddrToParentRow = useMemo(() => {
+        const m = {};
+        Object.entries(childrenScoreAddrs || {}).forEach(([pIdx, list]) => {
+            (list || []).forEach(a => { m[a] = Number(pIdx); });
+        });
+        return m;
+    }, [childrenScoreAddrs]);
 
     // Khi người dùng chọn tiêu chí tại dòng II/III/IV/V
     const handleSectionChoose = (rowIndex, roman, label) => {
@@ -194,14 +204,71 @@ export default function FormViewer({ formId }) {
         if (first) setCriteriaSelectValueByRow((m) => ({...m, [rowIndex]: first.value}));
     };
 
+    // Xoá dòng con đã tạo từ Select và cập nhật công thức của dòng cha
+    const handleRemoveChild = (rowIndex, childScoreAddr) => {
+        const parentRowIndex = childAddrToParentRow[childScoreAddr];
+        if (parentRowIndex === undefined) return;
+
+        setTable((prev) => {
+            if (!prev) return prev;
+            const nextRows = [...(prev.rows || [])];
+
+            // 1) Xoá dòng con tại vị trí hiện tại
+            nextRows.splice(rowIndex, 1);
+
+            // 2) Cập nhật công thức SUM(...) cho ô điểm của dòng La Mã (cha)
+            const remainingAddrs = (childrenScoreAddrs[parentRowIndex] || []).filter(a => a !== childScoreAddr);
+            const parentRow = nextRows[parentRowIndex];
+            if (parentRow && parentRow.cells) {
+                const parentCells = [...parentRow.cells];
+                parentCells[scoreColIdx] = {
+                    ...parentCells[scoreColIdx],
+                    formula: remainingAddrs.length ? `=SUM(${remainingAddrs.join(',')})` : '=0',
+                };
+                nextRows[parentRowIndex] = { ...parentRow, cells: parentCells };
+            }
+
+            return { ...prev, rows: nextRows };
+        });
+
+        // 3) Cập nhật danh sách addr con
+        setChildrenScoreAddrs((prev) => {
+            const arr = (prev[parentRowIndex] || []).filter(a => a !== childScoreAddr);
+            return { ...prev, [parentRowIndex]: arr };
+        });
+
+        // 4) Xoá input đã nhập cho addr con (nếu có)
+        setCellInputs((prev) => {
+            if (!(childScoreAddr in prev)) return prev;
+            const { [childScoreAddr]: _drop, ...rest } = prev;
+            return rest;
+        });
+    };
+
     const handleExport = async () => {
         try {
+            // Map user fullname -> employee_name and selected position -> role
+            const current = authService.getCurrentUser();
+            const employee_name = current?.fullname || current?.username || '';
+
+            let role = '';
+            try {
+                const departmentId = localStorage.getItem('ufp.departmentId') || '';
+                const positionId = localStorage.getItem('ufp.positionId') || '';
+                if (departmentId && positionId) {
+                    const positions = orgData.positions?.[departmentId] || [];
+                    role = findNameById(positions, positionId) || '';
+                }
+            } catch {}
+
             await exportFormExcel({
                 table,
                 cellInputs,
                 computedByAddr,
                 fileName: `Phieu_tu_danh_gia_${new Date().toISOString().slice(0, 10)}.xlsx`,
                 title: 'BẢNG TỰ ĐÁNH GIÁ MỨC ĐỘ HOÀN THÀNH CÔNG VIỆC',
+                employee_name,
+                role,
                 protectSheet: true,
                 protectPassword: 'Admin@6421',
                 readOnly: true,
@@ -256,7 +323,7 @@ export default function FormViewer({ formId }) {
     );
 
     return (
-        <div style={{maxWidth: 960, margin: '24px auto'}}>
+        <div style={{maxWidth: 1200, margin: '0 auto'}}>
             <Title level={3} style={{marginBottom: 8}}>{formTitle}</Title>
 
             <div style={{marginBottom: 12, display: 'flex', gap: 8}}>
@@ -272,6 +339,9 @@ export default function FormViewer({ formId }) {
                     sectionOptions={SECTION_OPTIONS}
                     onSectionChoose={handleSectionChoose}
                     selectValueByRow={criteriaSelectValueByRow}
+                    scoreColIdx={scoreColIdx}
+                    childAddrToParentRow={childAddrToParentRow}
+                    onRemoveChild={handleRemoveChild}
                 />
             )}
         </div>
