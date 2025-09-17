@@ -19,8 +19,8 @@ import {
 import SchemaTable from './components/SchemaTable';
 import {buildInitialInputs, buildCellMap, computeComputedByAddr} from './utils/formulaEngine';
 import exportFormExcel from './utils/exportFormExcel';
-import { authService } from '../../services/authService';
-import { orgData, findNameById } from '../../data/orgData';
+import {authService} from '../../services/authService';
+import {orgData, findNameById} from '../../data/orgData';
 
 const {Title} = Typography;
 
@@ -43,8 +43,14 @@ const SECTION_OPTIONS = {
         {label: 'Số tuyệt đối nợ xấu giảm so với Quý trước', value: 'III-7'}, // Cộng 2 điểm
         {label: 'Phát triển được 01 đơn vị trả lương qua tài khoản', value: 'III-8'}, // Cộng 3 điểm/1 đơn vị
         {label: 'Tỷ lệ CASA BQ trong Quý tăng từ 1% trở lên so với thực hiện Quý trước', value: 'III-9'}, // Cộng 2 điểm
-        {label: 'Phát triển được 01 đơn vị mới sử dụng dịch vụ TTQT (không bao gồm KH của đơn vị/phòng nghiệp vụ khác chuyển lên)', value: 'III-10'}, // Cộng 2 điểm/1 đơn vị
-        {label: 'Phát triển được 01 đơn vị mới sử dụng dịch vụ bảo lãnh (không bao gồm KH của đơn vị/phòng nghiệp vụ khác chuyển lên)', value: 'III-11'}, // Cộng 1 điểm/đơn vị
+        {
+            label: 'Phát triển được 01 đơn vị mới sử dụng dịch vụ TTQT (không bao gồm KH của đơn vị/phòng nghiệp vụ khác chuyển lên)',
+            value: 'III-10'
+        }, // Cộng 2 điểm/1 đơn vị
+        {
+            label: 'Phát triển được 01 đơn vị mới sử dụng dịch vụ bảo lãnh (không bao gồm KH của đơn vị/phòng nghiệp vụ khác chuyển lên)',
+            value: 'III-11'
+        }, // Cộng 1 điểm/đơn vị
         {label: 'Thu ròng từ kinh doanh ngoại tệ đạt từ 150% so với Quý trước liền kề', value: 'III-12'}, // Cộng 2 điểm
         {label: 'Chỉ tiêu tiếp thị tín dụng (chỉ tiêu cá nhân) vượt kế hoạch Quý được giao', value: 'III-13'}, // Cứ vượt 10% + 1 điểm, Max 5 điểm
     ],
@@ -61,14 +67,20 @@ const SECTION_OPTIONS = {
     V: [
         {label: 'Điểm thưởng (tối đa 05 điểm)', value: 'V-1'},
         {label: 'Một trong số các chỉ tiêu: Dư nợ, nguồn vốn hoàn thành KH năm được giao', value: 'V-2'}, // Thưởng 03 điểm/mỗi chỉ tiêu tại Quý hoàn thành
-        {label: 'Một trong số các chỉ tiêu: thu dịch vụ, thu hồi nợ đã XLRR, tài chính hoàn thành KH năm được giao', value: 'V-3'}, // Thưởng 05 điểm tại Quý hoàn thành
-        {label: 'Có sáng kiến, giải pháp, cách làm hay đem lại hiệu quả công việc, nâng cao năng suất lao động tại đơn vị được Hội đồng thi đua tại Chi nhánh công nhận', value: 'V-4'}, // Thưởng 03 điểm/mỗi sáng kiến
+        {
+            label: 'Một trong số các chỉ tiêu: thu dịch vụ, thu hồi nợ đã XLRR, tài chính hoàn thành KH năm được giao',
+            value: 'V-3'
+        }, // Thưởng 05 điểm tại Quý hoàn thành
+        {
+            label: 'Có sáng kiến, giải pháp, cách làm hay đem lại hiệu quả công việc, nâng cao năng suất lao động tại đơn vị được Hội đồng thi đua tại Chi nhánh công nhận',
+            value: 'V-4'
+        }, // Thưởng 03 điểm/mỗi sáng kiến
         {label: 'Đạt thành tích trong các cuộc thi nghiệp vụ do Agribank hoặc chi nhánh tổ chức', value: 'V-5'}, // Nhất: 5 điểm; Nhì: 4 điểm; Ba: 3 điểm
     ],
 };
 
-export default function FormViewer({ formId }) {
-    const { id: routeId } = useParams();
+export default function FormViewer({formId}) {
+    const {id: routeId} = useParams();
     const id = formId ?? routeId;
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -108,7 +120,7 @@ export default function FormViewer({ formId }) {
 
     // ⚠️ Giữ dữ liệu cũ, chỉ thêm default cho addr mới khi bảng thay đổi
     useEffect(() => {
-        setCellInputs(prev => ({ ...buildInitialInputs(table), ...prev }));
+        setCellInputs(prev => ({...buildInitialInputs(table), ...prev}));
     }, [table]);
 
     const computedByAddr = useMemo(
@@ -128,10 +140,51 @@ export default function FormViewer({ formId }) {
         return i >= 0 ? i : 6; // fallback: col_7 (index 6)
     }, [template]);
 
+    // A = I + II + III + IV + V (ở cột "Điểm theo mức độ hoàn thành")
+    useEffect(() => {
+        if (!table?.rows || scoreColIdx == null) return;
+
+        const getRowBySTT = (stt) =>
+            (table.rows || []).find(r => String(r?.cells?.[0]?.value || '').trim() === stt);
+
+        const getScoreAddrOf = (stt) =>
+            getRowBySTT(stt)?.cells?.[scoreColIdx]?.addr || null;
+
+        const targetAddrs = ['I', 'II', 'III', 'IV', 'V']
+            .map(getScoreAddrOf)
+            .filter(Boolean);
+
+        const rowA = getRowBySTT('A');
+        if (!rowA || !rowA.cells?.[scoreColIdx] || targetAddrs.length === 0) return;
+
+        const desiredFormula = `=SUM(${targetAddrs.join(',')})`;
+        const current = rowA.cells[scoreColIdx].formula || '';
+
+        // Tránh loop: chỉ set khi khác công thức hiện tại
+        if (current !== desiredFormula) {
+            setTable(prev => {
+                if (!prev?.rows) return prev;
+                const nextRows = prev.rows.map(r => {
+                    const stt = String(r?.cells?.[0]?.value || '').trim();
+                    if (stt !== 'A') return r;
+                    const cells = r.cells.slice();
+                    cells[scoreColIdx] = {...cells[scoreColIdx], formula: desiredFormula};
+                    return {...r, cells};
+                });
+                return {...prev, rows: nextRows};
+            });
+        }
+    }, [table, scoreColIdx]);
+
+
     // Convert số thứ tự cột -> chữ cột Excel (A, B, ... G)
     const numToCol = (num) => {
         let s = '', n = num;
-        while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); }
+        while (n > 0) {
+            const m = (n - 1) % 26;
+            s = String.fromCharCode(65 + m) + s;
+            n = Math.floor((n - 1) / 26);
+        }
         return s;
     };
 
@@ -143,7 +196,9 @@ export default function FormViewer({ formId }) {
     const childAddrToParentRow = useMemo(() => {
         const m = {};
         Object.entries(childrenScoreAddrs || {}).forEach(([pIdx, list]) => {
-            (list || []).forEach(a => { m[a] = Number(pIdx); });
+            (list || []).forEach(a => {
+                m[a] = Number(pIdx);
+            });
         });
         return m;
     }, [childrenScoreAddrs]);
@@ -187,16 +242,16 @@ export default function FormViewer({ formId }) {
                 ...parentCells[scoreColIdx],
                 formula: `=SUM(${nextAddrs.join(',')})`,
             };
-            nextRows[rowIndex] = { ...parentRow, cells: parentCells };
+            nextRows[rowIndex] = {...parentRow, cells: parentCells};
 
             // 3) Chèn dòng con ngay dưới dòng La Mã
             nextRows.splice(rowIndex + 1, 0, newRow);
 
-            return { ...prev, rows: nextRows };
+            return {...prev, rows: nextRows};
         });
 
         // 4) Lưu lại danh sách addr con & tăng bộ đếm addr ảo
-        setChildrenScoreAddrs(prev => ({ ...prev, [rowIndex]: nextAddrs }));
+        setChildrenScoreAddrs(prev => ({...prev, [rowIndex]: nextAddrs}));
         setVirtualRowNo(n => n + 1);
 
         // 5) Reset riêng ô Select của dòng này về option đầu tiên theo yêu cầu trước đó
@@ -225,22 +280,22 @@ export default function FormViewer({ formId }) {
                     ...parentCells[scoreColIdx],
                     formula: remainingAddrs.length ? `=SUM(${remainingAddrs.join(',')})` : '=0',
                 };
-                nextRows[parentRowIndex] = { ...parentRow, cells: parentCells };
+                nextRows[parentRowIndex] = {...parentRow, cells: parentCells};
             }
 
-            return { ...prev, rows: nextRows };
+            return {...prev, rows: nextRows};
         });
 
         // 3) Cập nhật danh sách addr con
         setChildrenScoreAddrs((prev) => {
             const arr = (prev[parentRowIndex] || []).filter(a => a !== childScoreAddr);
-            return { ...prev, [parentRowIndex]: arr };
+            return {...prev, [parentRowIndex]: arr};
         });
 
         // 4) Xoá input đã nhập cho addr con (nếu có)
         setCellInputs((prev) => {
             if (!(childScoreAddr in prev)) return prev;
-            const { [childScoreAddr]: _drop, ...rest } = prev;
+            const {[childScoreAddr]: _drop, ...rest} = prev;
             return rest;
         });
     };
@@ -259,7 +314,8 @@ export default function FormViewer({ formId }) {
                     const positions = orgData.positions?.[departmentId] || [];
                     role = findNameById(positions, positionId) || '';
                 }
-            } catch {}
+            } catch {
+            }
 
             await exportFormExcel({
                 table,
@@ -310,7 +366,8 @@ export default function FormViewer({ formId }) {
         };
     }, [id]);
 
-    if (loading) return <div style={{display: 'flex', justifyContent: 'center', padding: 40}}><Spin size="large"/></div>;
+    if (loading) return <div style={{display: 'flex', justifyContent: 'center', padding: 40}}><Spin size="large"/>
+    </div>;
     if (error) return (
         <div style={{maxWidth: 720, margin: '24px auto'}}>
             <Alert type="error" message="Failed to load form" description={error}/>

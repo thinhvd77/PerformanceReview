@@ -6,7 +6,7 @@ import {orgData, findNameById} from '../../data/orgData';
 import LogoutButton from '../../components/LogoutButton';
 import UserInfo from '../../components/UserInfo';
 import FormViewer from '../FormViewer/FormViewer';
-import logo from "../../components/logo_png.png";
+import logo from "../../assets/logo_png.png";
 
 const {Content, Header} = Layout;
 const {Title, Text} = Typography;
@@ -151,7 +151,7 @@ export default function UserFormPicker() {
                     <div style={{width: '15%', height: '100%'}}>
                         <img src={logo} style={{height: '100%', width: 'auto'}} alt={'logo'}/>
                     </div>
-                    <Title level={1} style={{margin: 0, marginLeft: 'auto', marginRight: 'auto', color: 'white', width:'75%', display: 'flex', alignItems: 'center', justifyContent:'center', fontSize: 'clamp(10px, 1vw, 22px)', lineHeight: 1.1}}>BẢNG TỰ ĐÁNH GIÁ MỨC ĐỘ HOÀN THÀNH CÔNG VIỆC</Title>
+                    <Title level={2} style={{margin: 0, marginLeft: 'auto', marginRight: 'auto', color: 'white', width:'75%', display: 'flex', alignItems: 'center', justifyContent:'center'}}>BẢNG TỰ ĐÁNH GIÁ MỨC ĐỘ HOÀN THÀNH CÔNG VIỆC</Title>
                     <Space size="large" style={{width: '15%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'flex-end'}}>
                         <UserInfo/>
                         <LogoutButton confirm size="small"/>
@@ -160,7 +160,7 @@ export default function UserFormPicker() {
             </Header>
             <Space direction="vertical" size="large" style={{width: '100%', maxWidth: 1200, margin: '5px auto 0 auto'}}>
                 <Title level={3} style={{margin: '5px 0 0 0'}}>Cán bộ chọn đúng Chi nhánh, Phòng ban, Chức vụ để lấy form đánh giá chính xác</Title>
-                <Card>
+                <Card style={{background: '#eeeeee', boxShadow: '0 2px 4px rgba(0, 0, 0, 0.5)', padding: '0'}}>
                     <Row gutter={[12, 12]}>
                         <Col xs={24} md={8}>
                             <label style={{display: 'block', marginBottom: 8, fontSize: '16px', fontWeight:'600'}}>Chi nhánh</label>
@@ -209,54 +209,15 @@ export default function UserFormPicker() {
                     </Row>
                 </Card>
 
-                <Card style={{padding: 0}}
-                >
-                    {selectedFormId ? (
-                        <div>
-                            <FormViewer formId={selectedFormId}/>
-                        </div>
-                    ) : loading ? (
-                        <div style={{display: 'flex', justifyContent: 'center', padding: '0'}}>
-                            <Spin/>
-                        </div>
-                    ) : results.length > 0 ? (
-                        <List
-                            bordered
-                            dataSource={results}
-                            renderItem={(it) => (
-                                <List.Item
-                                    actions={[
-                                        <Button key="view" type="link"
-                                                onClick={() => setSelectedFormId(it.id)}>Open</Button>
-                                    ]}
-                                >
-                                    <Space direction="vertical" size={2}>
-                                        <Text strong>{it.name}</Text>
-                                        {(Array.isArray(it.assignedGroups) && it.assignedGroups.length > 0) ? (
-                                            <Space wrap>
-                                                {it.assignedGroups.map((g, i) => (
-                                                    <Tag key={i}>
-                                                        {findNameById(orgData.branches, g.branchId)} / {findNameById(orgData.departments[g.branchId], g.departmentId)} / {findNameById(orgData.positions[g.departmentId], g.positionId)}
-                                                    </Tag>
-                                                ))}
-                                            </Space>
-                                        ) : it.assignedGroup ? (
-                                            <Tag>
-                                                {findNameById(orgData.branches, it.assignedGroup.branchId)} / {findNameById(orgData.departments[it.assignedGroup.branchId], it.assignedGroup.departmentId)} / {findNameById(orgData.positions[it.assignedGroup.departmentId], it.assignedGroup.positionId)}
-                                            </Tag>
-                                        ) : (
-                                            <Text type="secondary">Unassigned</Text>
-                                        )}
-                                    </Space>
-                                </List.Item>
-                            )}
-                        />
-                    ) : (
-                        searched && (
-                            <Empty description="No forms found for the selected group."/>
-                        )
-                    )}
-                </Card>
+                {selectedFormId ? (
+                    <div>
+                        <FormViewer formId={selectedFormId}/>
+                    </div>
+                ) : (
+                    searched && (
+                        <Empty description="Không tìm thấy form."/>
+                    )
+                )}
             </Space>
         </div>
     );

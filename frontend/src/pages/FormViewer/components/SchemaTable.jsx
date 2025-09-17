@@ -72,7 +72,9 @@ export default function SchemaTable({
                                     const addr = cell.addr;
                                     const computedVal = addr ? computedByAddr[addr] : undefined;
                                     const displayVal = (cell.formula && addr)
-                                        ? (isNaN(computedVal) || computedVal === undefined ? '' : String(computedVal))
+                                        ? (computedVal === undefined ? '' : (typeof computedVal === 'number'
+                                            ? (Number.isNaN(computedVal) ? '' : String(computedVal))
+                                            : String(computedVal)))
                                         : String(cell.value ?? '').trim();
 
                                     const isCriteriaColumn = cIdx === 1; // cột "Tiêu chí" là cột thứ 2 (B)
@@ -115,10 +117,19 @@ export default function SchemaTable({
                                                 />
                                             ) : (
                                                 isChildRow && isCriteriaColumn ? (
-                                                    <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8}}>
+                                                    <div style={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'space-between',
+                                                        gap: 8
+                                                    }}>
                                                         <span>{displayVal}</span>
                                                         <a
-                                                            style={{color: '#cf1322', cursor: 'pointer', whiteSpace: 'nowrap'}}
+                                                            style={{
+                                                                color: '#cf1322',
+                                                                cursor: 'pointer',
+                                                                whiteSpace: 'nowrap'
+                                                            }}
                                                             onClick={() => onRemoveChild && childScoreAddr && onRemoveChild(rIdx, childScoreAddr)}
                                                         >
                                                             Xóa

@@ -22,10 +22,86 @@ const setAllBorders = (ws, r, c, rs = 1, cs = 1) => {
     }
 };
 
+// merge an toàn (tránh đè vùng đã merge)
+const safeMergeCells = (ws, range) => {
+    try {
+        const [startRange, endRange] = range.split(':');
+        const startMatch = startRange.match(/([A-Z]+)(\d+)/);
+        const endMatch = endRange.match(/([A-Z]+)(\d+)/);
+        if (!startMatch || !endMatch) return false;
+
+        const colToNum = (letters) => letters.split('').reduce((n, ch) => n * 26 + (ch.charCodeAt(0) - 64), 0);
+        const startCol = colToNum(startMatch[1]);
+        const startRow = parseInt(startMatch[2], 10);
+        const endCol = colToNum(endMatch[1]);
+        const endRow = parseInt(endMatch[2], 10);
+
+        for (let r = startRow; r <= endRow; r++) {
+            for (let c = startCol; c <= endCol; c++) {
+                const cell = ws.getCell(r, c);
+                if (cell && cell.isMerged) return false;
+            }
+        }
+        ws.mergeCells(range);
+        return true;
+    } catch {
+        return false;
+    }
+};
+
 const resolveCellValue = (cell, cellInputs, computedByAddr) => {
     if (cell?.formula && cell.addr) return computedByAddr[cell.addr] ?? '';
     if (cell?.input && cell.addr) return cellInputs[cell.addr] ?? '';
     return cell?.value ?? '';
+};
+
+// chuẩn hoá text (bỏ dấu, lowercase) để dò label linh hoạt
+const norm = (s) => String(s || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase().trim();
+
+// xếp loại theo hệ số F
+const classifyByRatio = (f) => {
+    const x = Number(f) || 0;
+    if (x < 0.5) return 'Không xếp loại';
+    if (x < 0.7) return 'E';
+    if (x < 0.8) return 'D';
+    if (x < 0.9) return 'C';
+    if (x < 0.95) return 'B';
+    if (x < 1) return 'A';
+    if (x < 1.1) return 'A+';
+    return 'A++';
+};
+
+// tìm cột theo từ khoá, ưu tiên “điểm theo mức độ hoàn thành” rồi tới “điểm”
+const findScoreColIdx = (columns) => {
+    const labels = (columns || []).map(c => norm(c?.label));
+    const colCount = labels.length;
+
+    // 1) chính xác nhất
+    let idx = labels.findIndex(l => l.includes('diem theo muc do hoan thanh'));
+    if (idx !== -1) return idx;
+
+    // 2) chứa cả “mức độ hoàn thành” và “điểm”
+    idx = labels.findIndex(l => l.includes('muc do hoan thanh') && l.includes('diem'));
+    if (idx !== -1) return idx;
+
+    // 3) cột có chữ “điểm” (lấy cột PHẢI NHẤT vì thường ở gần cuối)
+    const diemCols = labels
+        .map((l, i) => ({i, l}))
+        .filter(x => x.l.includes('diem'));
+    if (diemCols.length) return diemCols[diemCols.length - 1].i;
+
+    // 4) fallback: nếu có >=7 cột thì dùng G (index 6), else dùng cột cuối
+    if (colCount >= 7) return 6;
+    return Math.max(0, colCount - 1);
+};
+
+// tìm cột “Tiêu chí” (để đọc nhãn hàng)
+const findCriteriaColIdx = (columns) => {
+    const labels = (columns || []).map(c => norm(c?.label));
+    const idx = labels.findIndex(l => l.includes('tieu chi'));
+    return idx !== -1 ? idx : 1; // fallback B
 };
 
 export default async function exportFormExcel({
@@ -39,13 +115,16 @@ export default async function exportFormExcel({
                                                   allowSelectUnlocked = true,
                                                   readOnly = false,
                                                   allowResizeForPrint = false,
+                                                  injectRankRow = true,
+                                                  rankRowRoman = 'VII',
+                                                  rankRowLabel = 'Xếp loại lao động',
                                               }) {
     if (!table?.columns?.length || !table?.rows?.length) throw new Error('Thiếu dữ liệu bảng');
 
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet('Phiếu');
 
-    // Trang in & font mặc định
+    // Trang in
     ws.pageSetup = {
         paperSize: 9, // A4
         orientation: 'portrait',
@@ -71,73 +150,67 @@ export default async function exportFormExcel({
     }
     ws.columns = colWidths;
 
-    // ===== HEADER: Quốc hiệu – Tiêu ngữ =====
-    ws.mergeCells('A2', 'C2');
+    // ===== HEADER =====
+    safeMergeCells(ws, 'A2:C2');
     ws.getCell('A2').value = 'NGÂN HÀNG NÔNG NGHIỆP';
-    ws.getCell('A2').font = {name: 'Times New Roman', size: 11, bold: false, italic: false};
+    ws.getCell('A2').font = {name: 'Times New Roman', size: 11};
     ws.getCell('A2').alignment = {horizontal: 'center'};
 
-    ws.mergeCells('A3', 'C3');
+    safeMergeCells(ws, 'A3:C3');
     ws.getCell('A3').value = 'VÀ PHÁT TRIỂN NÔNG THÔN VIỆT NAM';
-    ws.getCell('A3').font = {name: 'Times New Roman', size: 11, bold: false, italic: false};
+    ws.getCell('A3').font = {name: 'Times New Roman', size: 11};
     ws.getCell('A3').alignment = {horizontal: 'center'};
 
-    ws.mergeCells('A4', 'C4');
+    safeMergeCells(ws, 'A4:C4');
     ws.getCell('A4').value = 'CHI NHÁNH BẮC TPHCM';
-    ws.getCell('A4').font = {name: 'Times New Roman', size: 11, bold: true, italic: false, underline: true};
+    ws.getCell('A4').font = {name: 'Times New Roman', size: 11, bold: true, underline: true};
     ws.getCell('A4').alignment = {horizontal: 'center'};
 
-    ws.mergeCells('F2', 'H2');
+    safeMergeCells(ws, 'F2:H2');
     ws.getCell('F2').value = 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM';
     ws.getCell('F2').alignment = {horizontal: 'center'};
     ws.getCell('F2').font = {name: 'Times New Roman', bold: true, size: 11};
 
-    ws.mergeCells('F3', 'H3');
+    safeMergeCells(ws, 'F3:H3');
     ws.getCell('F3').value = 'Độc lập - Tự do - Hạnh phúc';
     ws.getCell('F3').alignment = {horizontal: 'center'};
-    ws.getCell('F3').font = {name: 'Times New Roman', italic: false, size: 11, bold: true, underline: true};
+    ws.getCell('F3').font = {name: 'Times New Roman', size: 11, bold: true, underline: true};
 
-    // Dòng trống
     ws.addRow([]);
 
-    // ===== TIÊU ĐỀ PHIẾU =====
-    ws.mergeCells('A6', 'H6');
+    // ===== TIÊU ĐỀ =====
+    safeMergeCells(ws, `A6:${toCol(colCount)}6`);
     ws.getCell('A6').value = title;
     ws.getCell('A6').font = {name: 'Times New Roman', size: 11, bold: true};
     ws.getCell('A6').alignment = {horizontal: 'center'};
 
-    // Quý
     let quarter = 'I';
     const month = new Date().getMonth() + 1;
     if (month >= 4 && month <= 6) quarter = 'II';
     else if (month >= 7 && month <= 9) quarter = 'III';
     else if (month >= 10 && month <= 12) quarter = 'IV';
 
-    ws.mergeCells('A7', 'H7');
+    safeMergeCells(ws, `A7:${toCol(colCount)}7`);
     ws.getCell('A7').value = `Quý ${quarter} Năm ${new Date().getFullYear()}`;
     ws.getCell('A7').font = {name: 'Times New Roman', size: 11, bold: true};
     ws.getCell('A7').alignment = {horizontal: 'center'};
 
-    // Tên nhân viên
-    ws.mergeCells('A8', 'H8');
+    safeMergeCells(ws, `A8:${toCol(colCount)}8`);
     ws.getCell('A8').value = `Họ và tên: ${employee_name || '.............................................'}`;
-    ws.getCell('A8').font = {name: 'Times New Roman', size: 11, bold: false};
+    ws.getCell('A8').font = {name: 'Times New Roman', size: 11};
     ws.getCell('A8').alignment = {horizontal: 'left'};
 
-    // Chức vụ
-    ws.mergeCells('A9', 'H9');
+    safeMergeCells(ws, `A9:${toCol(colCount)}9`);
     ws.getCell('A9').value = `Chức vụ: ${role || '...................................................'}`;
-    ws.getCell('A9').font = {name: 'Times New Roman', size: 11, bold: false};
+    ws.getCell('A9').font = {name: 'Times New Roman', size: 11};
     ws.getCell('A9').alignment = {horizontal: 'left'};
 
-    // Một dòng trống rồi tới bảng
     ws.addRow([]);
 
-    // ===== BẢNG FORM (ở giữa trang, có khung) =====
+    // ===== BẢNG =====
     let startRow = 11;
 
-    // Hàng tiêu đề cột
-    // ws.getRow(startRow).height = 22;
+    // Header cột
     for (let c = 1; c <= colCount; c++) {
         const cell = ws.getCell(startRow, c);
         cell.value = table.columns[c - 1]?.label ?? '';
@@ -147,41 +220,74 @@ export default async function exportFormExcel({
     }
     setAllBorders(ws, startRow, 1, 1, colCount);
 
-    // Dòng dữ liệu
+    // === Chuẩn bị vị trí cột/nhãn để tính xếp loại ===
+    const scoreColIdx0 = findScoreColIdx(table.columns); // 0-based index “điểm…”
+    const scoreCol1 = scoreColIdx0 + 1;                  // 1-based cho exceljs
+    const criteriaColIdx0 = findCriteriaColIdx(table.columns);
+
+    // Tìm hàng “Hệ số hoàn thành công việc”
+    let rowIdxHeSo = -1;
+    (table.rows || []).forEach((r, i) => {
+        const label = norm(r?.cells?.[criteriaColIdx0]?.value);
+        if (rowIdxHeSo === -1 &&
+            (/he so hoan thanh cong viec/.test(label) || /he so hoan thanh/.test(label))) {
+            rowIdxHeSo = i;
+        }
+    });
+
+    // Tính chuỗi xếp loại từ hệ số
+    let rankText = '';
+    if (rowIdxHeSo >= 0) {
+        const ratioCell = table.rows[rowIdxHeSo]?.cells?.[scoreColIdx0];
+        const ratio = resolveCellValue(ratioCell, cellInputs, computedByAddr);
+        rankText = classifyByRatio(ratio);
+    }
+
+    // Dữ liệu
     let excelRow = startRow + 1;
     for (const row of table.rows) {
         let excelCol = 1;
-        // ws.getRow(excelRow).height = 20;
 
         for (const cell of (row.cells || [])) {
-            if (!cell || cell.hidden) continue;
+            if (!cell) continue;
 
             const colSpan = Math.max(1, cell.colSpan || 1);
             const rowSpan = Math.max(1, cell.rowSpan || 1);
+
+            // nếu là ô bị phủ bởi merge: chỉ nhảy qua cột
+            if (cell.hidden) {
+                excelCol += colSpan;
+                continue;
+            }
+
             const tl = `${toCol(excelCol)}${excelRow}`;
             const br = `${toCol(excelCol + colSpan - 1)}${excelRow + rowSpan - 1}`;
-            if (colSpan > 1 || rowSpan > 1) ws.mergeCells(`${tl}:${br}`);
+            if (colSpan > 1 || rowSpan > 1) safeMergeCells(ws, `${tl}:${br}`);
 
             const xcell = ws.getCell(excelRow, excelCol);
             xcell.value = resolveCellValue(cell, cellInputs, computedByAddr);
             xcell.font = {name: 'Times New Roman', size: 11};
-            xcell.alignment = {horizontal: 'left', vertical: 'middle', wrapText: true};
+            xcell.alignment = {
+                horizontal: (colSpan > 1 || rowSpan > 1) ? 'center' : 'left',
+                vertical: 'middle',
+                wrapText: true
+            };
 
-            // căn giữa cho cell chứa số
+            // căn giữa cho số
             if (typeof xcell.value === 'number' || String(xcell.value).match(/^\d+(\.\d+)?$/)) {
                 xcell.alignment.horizontal = 'center';
             }
 
-            // Mới: nếu readOnly => khóa tất cả; ngược lại giữ hành vi cũ
+            // bảo vệ cell
             if (readOnly) {
-                xcell.protection = {locked: true, hidden: !!cell?.formula}; // ẩn công thức nếu có
+                xcell.protection = {locked: true, hidden: !!cell?.formula};
             } else {
                 xcell.protection = cell?.input
                     ? {locked: false, hidden: false}
                     : {locked: true, hidden: !!cell?.formula};
             }
 
-            // canh giữa riêng cho cột STT nếu có
+            // canh giữa riêng cho cột STT
             if (excelCol === 1) xcell.alignment = {horizontal: 'center', vertical: 'middle', wrapText: true};
 
             // viền quanh vùng merge
@@ -194,7 +300,40 @@ export default async function exportFormExcel({
 
     const tableEndRow = excelRow - 1;
 
-    // ===== FOOTER: Ngày tháng & Chữ ký =====
+    // === HÀNG XẾP LOẠI (tự chèn & merge) ===
+    if (injectRankRow) {
+        const r = excelRow;
+
+        // cột STT (A) = 'VII'
+        const romanCell = ws.getCell(r, 1);
+        romanCell.value = rankRowRoman;
+        romanCell.font = {name: 'Times New Roman', bold: true, size: 11};
+        romanCell.alignment = {horizontal: 'center', vertical: 'middle'};
+        romanCell.protection = {locked: true, hidden: false};
+
+        const c = ws.getCell(r, 2);
+        c.value = rankRowLabel;
+        c.font = {name: 'Times New Roman', bold: true, size: 11};
+        c.alignment = {horizontal: 'left', vertical: 'middle', wrapText: true};
+        c.protection = {locked: true, hidden: false};
+
+        // merge từ cột điểm đến hết hàng cho chuỗi xếp loại
+        const rightStart = 3;      // ✅ dùng cột điểm đã dò
+        const rightEnd = colCount;
+        safeMergeCells(ws, `${toCol(rightStart)}${r}:${toCol(rightEnd)}${r}`);
+        const rc = ws.getCell(r, rightStart);
+        rc.value = rankText || '';
+        rc.font = {name: 'Times New Roman', bold: true, size: 11};
+        rc.alignment = {horizontal: 'center', vertical: 'middle', wrapText: true};
+        rc.protection = {locked: true, hidden: false};
+
+        // viền cả hàng xếp loại
+        setAllBorders(ws, r, 1, 1, colCount);
+
+        excelRow = r + 1;
+    }
+
+    // ===== FOOTER =====
     const blank1 = ws.addRow([]).number;
     const dateRow = blank1 + 1;
     const today = new Date();
@@ -202,36 +341,32 @@ export default async function exportFormExcel({
     const m = (today.getMonth() + 1).toString().padStart(2, '0');
     const y = today.getFullYear();
 
-    // "…, ngày … tháng … năm …" căn phải 3 cột cuối
     const dateLeftCol = Math.max(1, colCount - 2);
-    ws.mergeCells(`${toCol(dateLeftCol)}${dateRow}:${toCol(colCount)}${dateRow}`);
+    safeMergeCells(ws, `${toCol(dateLeftCol)}${dateRow}:${toCol(colCount)}${dateRow}`);
     const dateCell = ws.getCell(dateRow, dateLeftCol);
     dateCell.value = `Tp. Hồ Chí Minh, ngày ${d} tháng ${m} năm ${y}`;
     dateCell.font = {name: 'Times New Roman', size: 11, italic: true};
     dateCell.alignment = {horizontal: 'right'};
 
-    // Chữ ký phòng KH&QLRR
     const khCell = ws.getCell(`B${dateRow + 1}`);
     khCell.value = 'Phòng KH&QLRR';
     khCell.font = {name: 'Times New Roman', size: 11, bold: true};
     khCell.alignment = {horizontal: 'center'};
 
-    // Sign note KH&QLRR
     const noteKH = ws.getCell(`B${dateRow + 2}`);
     noteKH.value = '(Rà soát số liệu)';
     noteKH.font = {name: 'Times New Roman', size: 11, italic: true};
     noteKH.alignment = {horizontal: 'center'};
 
-    // Chữ ký nhân viên
+    safeMergeCells(ws, `${toCol(dateLeftCol)}${dateRow + 1}:${toCol(colCount)}${dateRow + 1}`);
     const empCell = ws.getCell(`${toCol(colCount - 1)}${dateRow + 1}`);
-    ws.mergeCells(`${toCol(dateLeftCol)}${dateRow + 1}:${toCol(colCount)}${dateRow + 1}`);
     empCell.value = 'NGƯỜI TỰ CHẤM ĐIỂM';
     empCell.font = {name: 'Times New Roman', size: 11, bold: true};
     empCell.alignment = {horizontal: 'center'};
 
+    // Protect sheet (tùy chọn)
     if (protectSheet) {
         const baseOpts = {
-            // chặn mọi thao tác sửa nội dung/định dạng ô
             formatCells: false,
             insertRows: false,
             insertColumns: false,
@@ -244,14 +379,12 @@ export default async function exportFormExcel({
         };
         const resizeOpts = readOnly && allowResizeForPrint
             ? {
-                // cho phép chọn để kéo giãn cột/hàng
                 selectLockedCells: true,
                 selectUnlockedCells: false,
-                formatColumns: true,  // ✅ cho đổi độ rộng cột
-                formatRows: true,     // ✅ cho đổi chiều cao hàng
+                formatColumns: true,
+                formatRows: true,
             }
             : {
-                // chế độ chỉ đọc "cứng": không chọn được ô nào
                 selectLockedCells: false,
                 selectUnlockedCells: false,
                 formatColumns: false,

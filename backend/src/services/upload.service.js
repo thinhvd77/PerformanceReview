@@ -16,7 +16,7 @@ const inferType = (values) => {
 
     const isBoolean = samples.every(v =>
         typeof v === 'boolean' ||
-        (typeof v === 'string' && ['true','false','yes','no','0','1'].includes(v.toLowerCase()))
+        (typeof v === 'string' && ['true', 'false', 'yes', 'no', '0', '1'].includes(v.toLowerCase()))
     );
     if (isBoolean) return 'boolean';
 
@@ -29,7 +29,7 @@ const inferType = (values) => {
     // Detect select-like if few unique values relative to samples
     const unique = Array.from(new Set(samples.map(s => String(s).trim())));
     if (unique.length > 0 && unique.length <= Math.max(5, Math.ceil(samples.length / 2))) {
-        return { type: 'select', options: unique };
+        return {type: 'select', options: unique};
     }
 
     return 'string';
@@ -87,7 +87,11 @@ export const processExcelFile = async (file) => {
     while (rows.length && rows[0].every(v => v === '')) rows.shift();
 
     if (rows.length === 0) {
-        return { title: path.parse(file.originalname || file.filename).name, schema: { title: path.parse(file.originalname || file.filename).name, fields: [] }, jsonData: [] };
+        return {
+            title: path.parse(file.originalname || file.filename).name,
+            schema: {title: path.parse(file.originalname || file.filename).name, fields: []},
+            jsonData: []
+        };
     }
 
     const headers = rows[0].map(h => String(h).trim());
@@ -119,19 +123,20 @@ export const processExcelFile = async (file) => {
     const normalizedHeaders = headers.map(h => h.normalize('NFC').toLowerCase());
     const looksLikeKpi = normalizedHeaders[0]?.startsWith('stt') || normalizedHeaders.includes('tiêu chí') || normalizedHeaders.includes('diem chuan') || normalizedHeaders.includes('điểm chuẩn');
 
-    const table = { columns: [], rows: [] };
-    if (looksLikeKpi) {
-        // Use up to the first 8 columns like in the screenshot
-        const colLabels = headers.slice(0, Math.min(headers.length, 8));
-        table.columns = colLabels.map((label, i) => ({ key: `col_${i+1}`, label }));
-
-        // Build merge map to compute spans
-        const mergeMap = new Map(); // masterAddress -> {rowSpan, colSpan}
-        const covered = new Set(); // non-master merged addresses
+    const table = {columns: [], rows: []};
+    // Also capture all merge ranges globally so the frontend or other consumers can preserve layout if needed
+    let mergeRanges = [];
+    // Build merge map globally once
+    const mergeMap = new Map(); // masterAddress -> {rowSpan, colSpan}
+    const covered = new Set(); // non-master merged addresses
+    try {
         const merges = worksheet._merges || worksheet?.model?.merges || [];
         const entries = merges instanceof Map ? Array.from(merges.keys()) : Array.isArray(merges) ? merges : Object.keys(merges);
+        mergeRanges = entries.filter((e) => typeof e === 'string');
         const colToNum = (letters) => letters.split('').reduce((n, ch) => n * 26 + (ch.charCodeAt(0) - 64), 0);
         const addr = (r, c) => `${String.fromCharCode(64 + c)}${r}`;
+        // keep numeric info for later clipping to visible columns
+        const mergeInfos = [];
         entries.forEach((range) => {
             if (typeof range !== 'string') return;
             const m = range.match(/([A-Z]+)(\d+):([A-Z]+)(\d+)/);
@@ -140,7 +145,8 @@ export const processExcelFile = async (file) => {
             const rStart = parseInt(r1, 10), rEnd = parseInt(r2, 10);
             const cStart = colToNum(c1), cEnd = colToNum(c2);
             const master = addr(rStart, cStart);
-            mergeMap.set(master, { rowSpan: rEnd - rStart + 1, colSpan: cEnd - cStart + 1 });
+            mergeInfos.push({rStart, rEnd, cStart, cEnd, master});
+            mergeMap.set(master, {rowSpan: rEnd - rStart + 1, colSpan: cEnd - cStart + 1});
             for (let r = rStart; r <= rEnd; r++) {
                 for (let c = cStart; c <= cEnd; c++) {
                     const a = addr(r, c);
@@ -148,10 +154,50 @@ export const processExcelFile = async (file) => {
                 }
             }
         });
-
+        // store for later use on looksLikeKpi block
+        worksheet.__mergeInfos = mergeInfos;
+    } catch (_) {
+        // ignore
+    }
+    if (looksLikeKpi) {
+        // Use up to the first 8 columns like in the screenshot
+        const colLabels = headers.slice(0, Math.min(headers.length, 8));
+        table.columns = colLabels.map((label, i) => ({key: `col_${i + 1}`, label}));
+        // Adjust merge anchors for the visible column window [1..N]
+        const N = table.columns.length;
+        const addr = (r, c) => `${String.fromCharCode(64 + c)}${r}`;
+        const mergeInfos = worksheet.__mergeInfos || [];
+        for (const info of mergeInfos) {
+            const {rStart, rEnd, cStart, cEnd} = info;
+            const rowSpan = rEnd - rStart + 1;
+            const colSpan = cEnd - cStart + 1;
+            // Overlaps the visible window?
+            if (cStart <= N && cEnd >= 1) {
+                const cStartVis = Math.max(1, cStart);
+                const cEndVis = Math.min(N, cEnd);
+                const anchor = addr(rStart, cStartVis);
+                // span clipped to visible subset
+                const clippedSpan = {rowSpan, colSpan: (cEndVis - cStartVis + 1)};
+                mergeMap.set(anchor, clippedSpan);
+                // Ensure anchor is not treated as covered
+                if (covered.has(anchor)) covered.delete(anchor);
+            }
+        }
+        // Apply header merge spans to columns (row 1)
+        for (let c = 1; c <= table.columns.length; c++) {
+            const a = `${String.fromCharCode(64 + c)}1`;
+            const span = mergeMap.get(a);
+            const isHidden = covered.has(a);
+            table.columns[c - 1] = {
+                ...table.columns[c - 1],
+                rowSpan: span?.rowSpan || 1,
+                colSpan: span?.colSpan || 1,
+                hidden: !!isHidden,
+            };
+        }
         // Fill table rows
         for (let r = 2; r <= 1 + dataRows.length; r++) { // worksheet row indices (starting at 2 considering header at 1)
-            const rowObj = { cells: [] };
+            const rowObj = {cells: []};
             for (let c = 1; c <= table.columns.length; c++) {
                 const cell = worksheet.getRow(r).getCell(c);
                 const value = getText(cell);
@@ -166,7 +212,15 @@ export const processExcelFile = async (file) => {
                 if (raw && typeof raw === 'object' && raw.formula) {
                     formula = raw.formula.startsWith('=') ? raw.formula : `=${raw.formula}`;
                 }
-                rowObj.cells.push({ addr: a, value, rowSpan: span?.rowSpan || 1, colSpan: span?.colSpan || 1, hidden: !!isHidden, input: !!hasFill, formula: formula || undefined });
+                rowObj.cells.push({
+                    addr: a,
+                    value,
+                    rowSpan: span?.rowSpan || 1,
+                    colSpan: span?.colSpan || 1,
+                    hidden: !!isHidden,
+                    input: !!hasFill,
+                    formula: formula || undefined
+                });
             }
             table.rows.push(rowObj);
         }
@@ -176,6 +230,7 @@ export const processExcelFile = async (file) => {
         title: path.parse(file.originalname || file.filename).name,
         fields,
         table,
+        mergeRanges,
     };
 
     // Also produce JSON objects for potential preview/use
@@ -187,5 +242,5 @@ export const processExcelFile = async (file) => {
         return obj;
     });
 
-    return { title: schema.title, schema, jsonData };
+    return {title: schema.title, schema, jsonData};
 }

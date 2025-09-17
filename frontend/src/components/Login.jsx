@@ -1,8 +1,8 @@
 import React, {useMemo, useState} from 'react';
 import {useNavigate} from 'react-router-dom';
 import {authService} from '../services/authService';
-import loginBg from './64807570_9495652.png';
-import logo from './LOGO.jpg'
+import loginBg from '../assets/login_bg.png';
+import logo from '../assets/LOGO.jpg'
 
 const styles = {
     page: {

@@ -35,9 +35,9 @@ export const orgData = {
             { id: 'hs-kt-nv-2', name: 'Nhân viên Nhóm II' }
         ],
         'hs-cn': [
-            { id: 'hs-cn-tp', name: 'Trưởng phòng' },
-            { id: 'hs-cn-pp-cv', name: 'Phó Trưởng phòng - Cho vay' },
-            { id: 'hs-cn-pp-dv', name: 'Phó Trưởng phòng - Dịch vụ' },
+            { id: 'hs-cn-tp', name: 'Trưởng phòng KHCN' },
+            { id: 'hs-cn-pp-cv', name: 'Phó Trưởng phòng KHCN - Cho vay' },
+            { id: 'hs-cn-pp-dv', name: 'Phó Trưởng phòng KHCN - Dịch vụ' },
             { id: 'hs-cn-cv', name: 'Nhân viên phát triển cho vay' },
             { id: 'hs-cn-cv-dv', name: 'Nhân viên phát triển cho vay và dịch vụ' }
         ],
@@ -70,8 +70,8 @@ export const orgData = {
             { id: 'hs-qlrr-nv', name: 'Nhân viên' }
         ],
         'hs-gd': [
-            { id: 'hs-gd-gd', name: 'Giám đốc' },
-            { id: 'hs-gd-pgd', name: 'Phó Giám đốc' }
+            { id: 'hs-gd-gd', name: 'Giám đốc chi nhánh' },
+            { id: 'hs-gd-pgd', name: 'Phó Giám đốc chi nhánh' }
         ],
         // Chi nhánh 6
         'cn6-kt': [
@@ -87,8 +87,8 @@ export const orgData = {
             { id: 'cn6-kh-cv-xln', name: 'Nhân viên phát triển cho vay và xử lý nợ' }
         ],
         'cn6-gd': [
-            { id: 'cn6-gd-gd', name: 'Giám đốc' },
-            { id: 'cn6-gd-pgd', name: 'Phó Giám đốc' }
+            { id: 'cn6-gd-gd', name: 'Giám đốc chi nhánh loại II' },
+            { id: 'cn6-gd-pgd', name: 'Phó Giám đốc chi nhánh loại II' }
         ],
         // Chi nhánh Nam Hoa
         'nh-kt': [

@@ -5,7 +5,7 @@ import UserManagementTab from './UserManagementTab';
 import FormManagementTab from './FormManagementTab';
 import LogoutButton from '../../components/LogoutButton';
 import UserInfo from '../../components/UserInfo';
-import logo from '../../components/logo_png.png'
+import logo from '../../assets/logo_png.png'
 
 const {Content, Header} = Layout;
 const {Title} = Typography;
