@@ -3,7 +3,6 @@ import {Card, Typography, Row, Col, Select, Button, Space, List, Tag, message, E
 import {useNavigate} from 'react-router-dom';
 import api from '../../services/api';
 import {orgData, findNameById} from '../../data/orgData';
-import LogoutButton from '../../components/LogoutButton';
 import UserInfo from '../../components/UserInfo';
 import FormViewer from '../FormViewer/FormViewer';
 import logo from "../../assets/logo_png.png";
@@ -154,7 +153,6 @@ export default function UserFormPicker() {
                     <Title level={2} style={{margin: 0, marginLeft: 'auto', marginRight: 'auto', color: 'white', width:'75%', display: 'flex', alignItems: 'center', justifyContent:'center'}}>BẢNG TỰ ĐÁNH GIÁ MỨC ĐỘ HOÀN THÀNH CÔNG VIỆC</Title>
                     <Space size="large" style={{width: '15%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'flex-end'}}>
                         <UserInfo/>
-                        <LogoutButton confirm size="small"/>
                     </Space>
                 </div>
             </Header>

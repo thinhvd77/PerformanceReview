@@ -92,7 +92,7 @@ export default function ImportTab() {
   const assigned = result?.formTemplate?.assignedGroup;
 
   return (
-    <Card bordered>
+    <Card>
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
         <Paragraph type="secondary">
           Choose Branch, Department and Position, click "Add group" for each assignment, then upload a CSV or Excel file.

@@ -14,13 +14,15 @@ import {
     Select,
     Typography,
     Empty,
-    Divider
+    Divider,
+    message,
 } from 'antd';
 import SchemaTable from './components/SchemaTable';
 import {buildInitialInputs, buildCellMap, computeComputedByAddr} from './utils/formulaEngine';
 import exportFormExcel from './utils/exportFormExcel';
 import {authService} from '../../services/authService';
 import {orgData, findNameById} from '../../data/orgData';
+import { saveAs } from 'file-saver';
 
 const {Title} = Typography;
 
@@ -99,14 +101,15 @@ export default function FormViewer({formId}) {
     useEffect(() => setTable(baseTable), [baseTable]);
 
     // Khởi tạo giá trị mặc định cho các dòng II/III/IV/V = option đầu tiên
+    // LƯU Ý: key theo ký hiệu La Mã (II/III/IV/V) để không bị lệch khi chèn/xoá hàng
     useEffect(() => {
         if (!baseTable?.rows) return;
         const next = {};
-        baseTable.rows.forEach((row, rIdx) => {
+        baseTable.rows.forEach((row) => {
             const roman = String(row?.cells?.[0]?.value || '').trim();
             if (/^(II|III|IV|V)$/.test(roman)) {
                 const opts = (SECTION_OPTIONS[roman] || []);
-                if (opts[0]) next[rIdx] = opts[0].value; // value của option đầu
+                if (opts[0]) next[roman] = opts[0].value; // value của option đầu
             }
         });
         setCriteriaSelectValueByRow(next);
@@ -140,7 +143,7 @@ export default function FormViewer({formId}) {
         return i >= 0 ? i : 6; // fallback: col_7 (index 6)
     }, [template]);
 
-    // A = I + II + III + IV + V (ở cột "Điểm theo mức độ hoàn thành")
+    // A = I + II + III - IV + V (ở cột "Điểm theo mức độ hoàn thành")
     useEffect(() => {
         if (!table?.rows || scoreColIdx == null) return;
 
@@ -150,14 +153,32 @@ export default function FormViewer({formId}) {
         const getScoreAddrOf = (stt) =>
             getRowBySTT(stt)?.cells?.[scoreColIdx]?.addr || null;
 
-        const targetAddrs = ['I', 'II', 'III', 'IV', 'V']
-            .map(getScoreAddrOf)
-            .filter(Boolean);
+        const addrI = getScoreAddrOf('I');
+        const addrII = getScoreAddrOf('II');
+        const addrIII = getScoreAddrOf('III');
+        const addrIV = getScoreAddrOf('IV');
+        const addrV = getScoreAddrOf('V');
+
+        const plusAddrs = [addrI, addrII, addrIII, addrV].filter(Boolean);
+        const hasPlus = plusAddrs.length > 0;
+        const hasIV = !!addrIV;
 
         const rowA = getRowBySTT('A');
-        if (!rowA || !rowA.cells?.[scoreColIdx] || targetAddrs.length === 0) return;
+        if (!rowA || !rowA.cells?.[scoreColIdx]) return;
 
-        const desiredFormula = `=SUM(${targetAddrs.join(',')})`;
+        // Xây công thức theo đủ trường hợp
+        let desiredFormula = '';
+        if (hasPlus && hasIV) {
+            desiredFormula = `=SUM(${plusAddrs.join(',')})-${addrIV}`;
+        } else if (hasPlus) {
+            desiredFormula = `=SUM(${plusAddrs.join(',')})`;
+        } else if (hasIV) {
+            desiredFormula = `=0-${addrIV}`;
+        } else {
+            // Không có dữ liệu để lập công thức
+            return;
+        }
+
         const current = rowA.cells[scoreColIdx].formula || '';
 
         // Tránh loop: chỉ set khi khác công thức hiện tại
@@ -254,9 +275,9 @@ export default function FormViewer({formId}) {
         setChildrenScoreAddrs(prev => ({...prev, [rowIndex]: nextAddrs}));
         setVirtualRowNo(n => n + 1);
 
-        // 5) Reset riêng ô Select của dòng này về option đầu tiên theo yêu cầu trước đó
+        // 5) Reset riêng ô Select của dòng này về option đầu tiên theo yêu cầu trước đó (key theo La Mã)
         const first = (SECTION_OPTIONS[roman] || [])[0];
-        if (first) setCriteriaSelectValueByRow((m) => ({...m, [rowIndex]: first.value}));
+        if (first) setCriteriaSelectValueByRow((m) => ({...m, [roman]: first.value}));
     };
 
     // Xoá dòng con đã tạo từ Select và cập nhật công thức của dòng cha
@@ -307,9 +328,11 @@ export default function FormViewer({formId}) {
             const employee_name = current?.fullname || current?.username || '';
 
             let role = '';
+            let branchId = '', departmentId = '', positionId = '';
             try {
-                const departmentId = localStorage.getItem('ufp.departmentId') || '';
-                const positionId = localStorage.getItem('ufp.positionId') || '';
+                branchId = localStorage.getItem('ufp.branchId') || '';
+                departmentId = localStorage.getItem('ufp.departmentId') || '';
+                positionId = localStorage.getItem('ufp.positionId') || '';
                 if (departmentId && positionId) {
                     const positions = orgData.positions?.[departmentId] || [];
                     role = findNameById(positions, positionId) || '';
@@ -317,11 +340,14 @@ export default function FormViewer({formId}) {
             } catch {
             }
 
-            await exportFormExcel({
+            const fileName = `Phieu_tu_danh_gia_${new Date().toISOString().slice(0, 10)}.xlsx`;
+
+            // 1) Build Excel buffer (no saving yet)
+            const buffer = await exportFormExcel({
                 table,
                 cellInputs,
                 computedByAddr,
-                fileName: `Phieu_tu_danh_gia_${new Date().toISOString().slice(0, 10)}.xlsx`,
+                fileName,
                 title: 'BẢNG TỰ ĐÁNH GIÁ MỨC ĐỘ HOÀN THÀNH CÔNG VIỆC',
                 employee_name,
                 role,
@@ -329,9 +355,47 @@ export default function FormViewer({formId}) {
                 protectPassword: 'Admin@6421',
                 readOnly: true,
                 allowResizeForPrint: true,
+                returnBuffer: true,
             });
+
+            // 2) Upload to backend for retrieval later
+            try {
+                const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                const fd = new FormData();
+                fd.append('file', blob, fileName);
+                fd.append('fileName', fileName);
+                fd.append('formId', id || template?.id || '');
+                const meta = {
+                    employee_name,
+                    role,
+                    branchId,
+                    departmentId,
+                    positionId,
+                    table,
+                    cellInputs,
+                    computedByAddr,
+                    title: formTitle,
+                    exportedAt: new Date().toISOString(),
+                };
+                fd.append('meta', JSON.stringify(meta));
+                const resp = await api.post('/exports', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+                const exportId = resp?.data?.id;
+                if (exportId) {
+                    message.success(`Đã lưu bản xuất (ID: ${exportId})`);
+                } else {
+                    message.success('Đã lưu bản xuất');
+                }
+            } catch (err) {
+                // Non-fatal: still allow local download
+                console.warn('Upload export failed:', err?.response?.data || err.message);
+            }
+
+            // 3) Save locally for user
+            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            saveAs(blob, fileName);
         } catch (e) {
             console.error(e);
+            message.error(e?.message || 'Xuất Excel thất bại');
         }
     };
 

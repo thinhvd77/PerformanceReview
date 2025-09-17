@@ -41,6 +41,21 @@ export const processExcelFile = async (file) => {
     await workbook.xlsx.readFile(filePath);
     const worksheet = workbook.worksheets[0];
 
+    // Helper: lấy numFmt từ cell (ưu tiên master nếu merge)
+    const getNumFmt = (cell) => {
+        if (!cell) return null;
+        const src = (cell.isMerged && cell.master) ? cell.master : cell;
+        return src.numFmt || src?.style?.numFmt || null;
+    };
+
+    // Helper: nhận diện format phần trăm
+    const isPercentFmt = (fmt) => {
+        if (!fmt) return false;
+        if (typeof fmt === 'string') return fmt.includes('%'); // "0%", "0.00%", "#,##0%"
+        if (typeof fmt === 'number') return fmt === 9 || fmt === 10; // builtin Percent (phòng hờ)
+        return false;
+    };
+
     // Helper: normalize exceljs cell value to plain text
     const getText = (cell) => {
         if (!cell) return '';
@@ -212,6 +227,7 @@ export const processExcelFile = async (file) => {
                 if (raw && typeof raw === 'object' && raw.formula) {
                     formula = raw.formula.startsWith('=') ? raw.formula : `=${raw.formula}`;
                 }
+                const numFmt = getNumFmt(cell);
                 rowObj.cells.push({
                     addr: a,
                     value,
@@ -219,7 +235,9 @@ export const processExcelFile = async (file) => {
                     colSpan: span?.colSpan || 1,
                     hidden: !!isHidden,
                     input: !!hasFill,
-                    formula: formula || undefined
+                    formula: formula || undefined,
+                    numFmt: numFmt || undefined,
+                    percent: isPercentFmt(numFmt),
                 });
             }
             table.rows.push(rowObj);

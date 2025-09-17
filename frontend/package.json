@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@ant-design/icons": "^6.0.2",
     "@react-buddy/ide-toolbox": "^2.4.0",
     "@react-buddy/palette-antd": "^5.3.0",
     "antd": "^5.27.3",

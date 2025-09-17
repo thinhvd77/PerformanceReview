@@ -10,6 +10,7 @@ import {AppDataSource} from './config/database.js';
 import userRoutes from './routes/userRoutes.js';
 import uploadRoutes from "./routes/upload.routes.js";
 import formTemplateRoutes from './routes/formTemplate.routes.js';
+import exportRoutes from './routes/export.routes.js';
 
 dotenv.config();
 
@@ -46,6 +47,7 @@ if (Object.keys(swaggerDocument).length > 0) {
 app.use('/api/users', userRoutes);
 app.use('/api/files', uploadRoutes);
 app.use('/api/forms', formTemplateRoutes);
+app.use('/api/exports', exportRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

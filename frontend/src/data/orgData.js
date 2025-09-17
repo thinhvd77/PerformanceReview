@@ -31,8 +31,7 @@ export const orgData = {
         'hs-kt': [
             { id: 'hs-kt-tp', name: 'Trưởng phòng' },
             { id: 'hs-kt-pp', name: 'Phó Trưởng phòng' },
-            { id: 'hs-kt-nv-1', name: 'Nhân viên Nhóm I' },
-            { id: 'hs-kt-nv-2', name: 'Nhân viên Nhóm II' }
+            { id: 'hs-kt-nv', name: 'Nhân viên phòng KT&NQ Hội sở' }
         ],
         'hs-cn': [
             { id: 'hs-cn-tp', name: 'Trưởng phòng KHCN' },
@@ -77,7 +76,7 @@ export const orgData = {
         'cn6-kt': [
             { id: 'cn6-kt-tp', name: 'Trưởng phòng' },
             { id: 'cn6-kt-pp', name: 'Phó Trưởng phòng' },
-            { id: 'cn6-kt-nv-1', name: 'Nhân viên' }
+            { id: 'cn6-kt-nv', name: 'Nhân viên phòng KT&NQ Chi nhánh loại II' }
         ],
         'cn6-kh': [
             { id: 'cn6-kh-tp', name: 'Trưởng phòng' },
@@ -94,7 +93,7 @@ export const orgData = {
         'nh-kt': [
             { id: 'nh-kt-tp', name: 'Trưởng phòng' },
             { id: 'nh-kt-pp', name: 'Phó Trưởng phòng' },
-            { id: 'nh-kt-nv-1', name: 'Nhân viên' }
+            { id: 'nh-kt-nv', name: 'Nhân viên phòng KT&NQ Chi nhánh loại II' }
         ],
         'nh-kh': [
             { id: 'nh-kh-tp', name: 'Trưởng phòng' },

@@ -22,7 +22,6 @@ export const User = new EntitySchema({
         role: {
             type: 'varchar',
             length: 255,
-            unique: true,
         },
         password: {
             type: 'varchar',

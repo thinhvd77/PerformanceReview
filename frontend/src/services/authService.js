@@ -24,6 +24,11 @@ export const authService = {
     return response.data;
   },
 
+  changePassword: async ({ currentPassword, newPassword }) => {
+    const response = await api.post('/users/change-password', { currentPassword, newPassword });
+    return response.data;
+  },
+
   login: async (credentials) => {
     const response = await api.post('/users/login', credentials);
     if (response.data.token) {

@@ -118,6 +118,7 @@ export default async function exportFormExcel({
                                                   injectRankRow = true,
                                                   rankRowRoman = 'VII',
                                                   rankRowLabel = 'Xếp loại lao động',
+                                                  returnBuffer = false,
                                               }) {
     if (!table?.columns?.length || !table?.rows?.length) throw new Error('Thiếu dữ liệu bảng');
 
@@ -248,8 +249,9 @@ export default async function exportFormExcel({
     for (const row of table.rows) {
         let excelCol = 1;
 
+        let colIdx0 = 0;
         for (const cell of (row.cells || [])) {
-            if (!cell) continue;
+            if (!cell) { colIdx0++; continue; }
 
             const colSpan = Math.max(1, cell.colSpan || 1);
             const rowSpan = Math.max(1, cell.rowSpan || 1);
@@ -257,6 +259,7 @@ export default async function exportFormExcel({
             // nếu là ô bị phủ bởi merge: chỉ nhảy qua cột
             if (cell.hidden) {
                 excelCol += colSpan;
+                colIdx0++;
                 continue;
             }
 
@@ -265,8 +268,42 @@ export default async function exportFormExcel({
             if (colSpan > 1 || rowSpan > 1) safeMergeCells(ws, `${tl}:${br}`);
 
             const xcell = ws.getCell(excelRow, excelCol);
-            xcell.value = resolveCellValue(cell, cellInputs, computedByAddr);
+            let v = resolveCellValue(cell, cellInputs, computedByAddr);
+
+            // Heuristic to decide if this cell should be displayed as percentage
+            const headerText = String(table?.columns?.[colIdx0]?.label || '').toLowerCase();
+            const headerIndicatesPercent = /%|tỷ lệ|ty le|percent/.test(headerText);
+            const strHasPercent = typeof v === 'string' && /%\s*$/.test(v.trim());
+            const wantPercent = !!(cell?.percent || (cell?.numFmt && String(cell.numFmt).includes('%')) || strHasPercent || headerIndicatesPercent);
+
+            if (wantPercent) {
+                if (typeof v === 'string') {
+                    const m = v.trim().match(/^(-?\d+(?:\.\d+)?)\s*%$/);
+                    if (m) {
+                        v = parseFloat(m[1]) / 100;
+                    } else {
+                        const n = Number(v);
+                        if (!isNaN(n)) {
+                            // If user typed 80 meaning 80%
+                            v = n > 1 && n <= 100 ? n / 100 : n;
+                        }
+                    }
+                } else if (typeof v === 'number') {
+                    // If number looks like 80 (meaning 80%), convert to 0.8
+                    if (v > 1 && v <= 100) v = v / 100;
+                }
+            }
+
+            xcell.value = v;
+            // Apply number format if provided (e.g., percentage)
+            if (cell?.numFmt) {
+                xcell.numFmt = cell.numFmt;
+            } else if (wantPercent) {
+                xcell.numFmt = '0%';
+            }
             xcell.font = {name: 'Times New Roman', size: 11};
+
+            colIdx0++;
             xcell.alignment = {
                 horizontal: (colSpan > 1 || rowSpan > 1) ? 'center' : 'left',
                 vertical: 'middle',
@@ -395,5 +432,8 @@ export default async function exportFormExcel({
 
     // Lưu file
     const buffer = await wb.xlsx.writeBuffer();
+    if (returnBuffer) {
+        return buffer;
+    }
     saveAs(new Blob([buffer], {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}), fileName);
 }

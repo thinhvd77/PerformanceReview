@@ -5,6 +5,7 @@ import FormViewer from "./pages/FormViewer/FormViewer";
 import { authService } from './services/authService';
 import AdminPage from './pages/Admin/AdminPage';
 import UserFormPicker from './pages/User/UserFormPicker';
+import SavedExportViewer from './pages/SavedExportViewer';
 
 const PrivateRoute = ({ children }) => {
   const user = authService.getCurrentUser();
@@ -20,6 +21,7 @@ function App() {
           <Route path="/" element={<UserFormPicker />} />
           <Route path="/forms/:id" element={<FormViewer />} />
           <Route path="/admin" element={<PrivateRoute><AdminPage /></PrivateRoute>} />
+                    <Route path="/saved-exports/:id" element={<PrivateRoute><SavedExportViewer /></PrivateRoute>} />
         </Routes>
       </div>
     </Router>

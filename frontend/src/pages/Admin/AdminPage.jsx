@@ -3,7 +3,7 @@ import {Tabs, Layout, Typography, Space, Image} from 'antd';
 import ImportTab from './ImportTab';
 import UserManagementTab from './UserManagementTab';
 import FormManagementTab from './FormManagementTab';
-import LogoutButton from '../../components/LogoutButton';
+import ExportsTab from './ExportsTab';
 import UserInfo from '../../components/UserInfo';
 import logo from '../../assets/logo_png.png'
 
@@ -33,7 +33,6 @@ export default function AdminPage() {
                     <Title level={3} style={{margin: 0, marginLeft: 'auto', marginRight: 'auto', color: 'white', width:'75%', display: 'flex', alignItems: 'center', justifyContent:'center', fontSize: 'clamp(14px, 2.2vw, 22px)', lineHeight: 1.1}}>Admin Panel</Title>
                     <Space size="large" style={{width: '15%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'flex-end'}}>
                         <UserInfo/>
-                        <LogoutButton confirm size="small"/>
                     </Space>
                 </div>
             </Header>
@@ -45,7 +44,7 @@ export default function AdminPage() {
                         key: 'forms',
                         label: 'Form Management',
                         children: <FormManagementTab/>
-                    }, {key: 'users', label: 'User Management', children: <UserManagementTab/>},]}
+                    }, {key: 'users', label: 'User Management', children: <UserManagementTab/>}, {key: 'exports', label: 'Saved Exports', children: <ExportsTab/>}]}
                 />
             </Content>
         </Layout>);
