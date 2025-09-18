@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Card, Typography, Space, Input, Button, Table, Tag, message } from 'antd';
+import { Card, Typography, Space, Input, Button, Table, Tag, message, Select } from 'antd';
 import { DownloadOutlined, SearchOutlined, ReloadOutlined, EyeOutlined } from '@ant-design/icons';
-import api from '../../services/api';
+import api from '../services/api.js';
 import { saveAs } from 'file-saver';
 import { useNavigate } from 'react-router-dom';
 
@@ -10,6 +10,8 @@ const { Title, Text } = Typography;
 export default function ExportsTab() {
   const navigate = useNavigate();
   const [q, setQ] = useState('');
+  const [branchFilter, setBranchFilter] = useState('');
+  const [departmentFilter, setDepartmentFilter] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [total, setTotal] = useState(0);
@@ -17,11 +19,22 @@ export default function ExportsTab() {
   const [loading, setLoading] = useState(false);
   const [downloadingId, setDownloadingId] = useState(null);
 
+  // Extract unique branch and department options from data
+  const branchOptions = useMemo(() => {
+    const uniqueBranches = [...new Set(rows.filter(r => r?.meta?.branchId).map(r => r.meta.branchId))];
+    return uniqueBranches.sort();
+  }, [rows]);
+
+  const departmentOptions = useMemo(() => {
+    const uniqueDepartments = [...new Set(rows.filter(r => r?.meta?.departmentId).map(r => r.meta.departmentId))];
+    return uniqueDepartments.sort();
+  }, [rows]);
+
   const fetchList = async (params = {}) => {
     setLoading(true);
     try {
       const { data } = await api.get('/exports', {
-        params: { page, pageSize, q, ...params },
+        params: { page, pageSize, q, branchId: branchFilter, departmentId: departmentFilter, ...params },
       });
       setRows(data?.data || []);
       setTotal(data?.total || 0);
@@ -38,11 +51,19 @@ export default function ExportsTab() {
   useEffect(() => {
     fetchList();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, pageSize]);
+  }, [page, pageSize, branchFilter, departmentFilter]);
 
   const onSearch = () => {
     setPage(1);
     fetchList({ page: 1 });
+  };
+
+  const onClearFilters = () => {
+    setQ('');
+    setBranchFilter('');
+    setDepartmentFilter('');
+    setPage(1);
+    fetchList({ page: 1, q: '', branchId: '', departmentId: '' });
   };
 
   const handleDownload = async (record) => {
@@ -119,7 +140,7 @@ export default function ExportsTab() {
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
         <Title level={4} style={{ margin: 0 }}>Danh sách file form đã lưu</Title>
         <Card>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
             <Input
               value={q}
               onChange={(e) => setQ(e.target.value)}
@@ -127,7 +148,36 @@ export default function ExportsTab() {
               onPressEnter={onSearch}
               style={{ maxWidth: 360 }}
             />
+            <Select
+              value={branchFilter}
+              onChange={setBranchFilter}
+              placeholder="Lọc theo chi nhánh..."
+              style={{ minWidth: 200 }}
+              optionFilterProp="children"
+            >
+              <Select.Option value="">Tất cả chi nhánh</Select.Option>
+              {branchOptions.map(branch => (
+                <Select.Option key={branch} value={branch}>
+                  CN: {branch}
+                </Select.Option>
+              ))}
+            </Select>
+            <Select
+              value={departmentFilter}
+              onChange={setDepartmentFilter}
+              placeholder="Lọc theo phòng ban..."
+              style={{ minWidth: 200 }}
+              optionFilterProp="children"
+            >
+              <Select.Option value="">Tất cả phòng ban</Select.Option>
+              {departmentOptions.map(department => (
+                <Select.Option key={department} value={department}>
+                  PB: {department}
+                </Select.Option>
+              ))}
+            </Select>
             <Button type="primary" icon={<SearchOutlined />} onClick={onSearch} loading={loading}>Tìm</Button>
+            <Button icon={<ReloadOutlined />} onClick={onClearFilters} disabled={loading}>Xóa bộ lọc</Button>
             <Button icon={<ReloadOutlined />} onClick={() => fetchList()} disabled={loading}>Làm mới</Button>
           </div>
 

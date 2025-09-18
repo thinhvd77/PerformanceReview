@@ -1,7 +1,7 @@
 // FormViewer.jsx
 import React, {useEffect, useMemo, useState} from 'react';
 import {useParams} from 'react-router-dom';
-import api from '../../services/api';
+import api from '../services/api.js';
 import {
     Form,
     Input,
@@ -17,11 +17,11 @@ import {
     Divider,
     message,
 } from 'antd';
-import SchemaTable from './components/SchemaTable';
-import {buildInitialInputs, buildCellMap, computeComputedByAddr} from './utils/formulaEngine';
-import exportFormExcel from './utils/exportFormExcel';
-import {authService} from '../../services/authService';
-import {orgData, findNameById} from '../../data/orgData';
+import SchemaTable from './SchemaTable.jsx';
+import {buildInitialInputs, buildCellMap, computeComputedByAddr} from '../utils/formulaEngine.js';
+import exportFormExcel from '../utils/exportFormExcel.js';
+import {authService} from '../services/authService.js';
+import {orgData, findNameById} from '../data/orgData.js';
 import { saveAs } from 'file-saver';
 
 const {Title} = Typography;

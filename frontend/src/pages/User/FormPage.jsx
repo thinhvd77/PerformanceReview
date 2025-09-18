@@ -4,13 +4,13 @@ import {useNavigate} from 'react-router-dom';
 import api from '../../services/api';
 import {orgData, findNameById} from '../../data/orgData';
 import UserInfo from '../../components/UserInfo';
-import FormViewer from '../FormViewer/FormViewer';
+import FormViewer from '../../components/FormViewer.jsx';
 import logo from "../../assets/logo_png.png";
 
 const {Content, Header} = Layout;
 const {Title, Text} = Typography;
 
-export default function UserFormPicker() {
+export default function FormPage() {
     const [branchId, setBranchId] = useState();
     const [departmentId, setDepartmentId] = useState();
     const [positionId, setPositionId] = useState();
@@ -90,7 +90,7 @@ export default function UserFormPicker() {
         }
         if (branchId && departmentId && positionId) {
             autoSearchTimer.current = setTimeout(() => {
-                fetchForms();
+                fetchForms().then();
             }, 300);
         }
         return () => {

@@ -1,6 +1,6 @@
 import React, {useMemo, useState} from 'react';
 import {useNavigate} from 'react-router-dom';
-import {authService} from '../services/authService';
+import {useAuth} from '../contexts/authContext.jsx';
 import loginBg from '../assets/login_bg.png';
 import logo from '../assets/LOGO.jpg'
 
@@ -71,7 +71,6 @@ const styles = {
         color: '#0f172a',
         outline: 'none',
         fontSize: '16px',
-        // transition: 'border-color 120ms ease, box-shadow 120ms ease',
     },
     inputInvalid: {
         borderColor: '#fca5a5',
@@ -129,6 +128,7 @@ const styles = {
 
 const Login = () => {
     const navigate = useNavigate();
+    const { login, isAdmin } = useAuth();
     const [formData, setFormData] = useState({
         username: '',
         password: '',
@@ -162,15 +162,10 @@ const Login = () => {
 
         setLoading(true);
         try {
-            await authService.login(formData);
-            // Navigate based on role
-            const current = authService.getCurrentUser();
-            const role = (current?.role || '').toLowerCase();
-            if (role === 'admin') {
-                navigate('/admin');
-            } else {
-                navigate('/');
-            }
+            await login(formData);
+            // Navigation will be handled automatically by App.jsx based on role
+            // Admin users will be redirected to /admin, others to /
+            navigate('/');
         } catch (err) {
             setError(err?.response?.data?.message || 'Login failed. Please try again.');
         } finally {

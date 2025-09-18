@@ -35,7 +35,7 @@ export default function ChangePasswordModal({ open, onClose }) {
       onCancel={() => onClose?.()}
       okText="Lưu"
       cancelText="Hủy"
-      destroyOnClose
+      destroyOnHidden={true}
     >
       <Form form={form} layout="vertical" preserve={false}>
         <Form.Item

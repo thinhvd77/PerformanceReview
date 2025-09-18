@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Card, Table, Typography, Space, Button, message, Tooltip, Popconfirm } from 'antd';
 import { ReloadOutlined, EyeOutlined, LinkOutlined, DeleteOutlined } from '@ant-design/icons';
-import api from '../../services/api';
+import api from '../services/api.js';
 import { useNavigate } from 'react-router-dom';
 
 const { Title, Text } = Typography;
@@ -40,7 +40,7 @@ export default function FormManagementTab() {
   };
 
   useEffect(() => {
-    fetchData();
+    fetchData().then();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -64,26 +64,10 @@ export default function FormManagementTab() {
         render: (_, record) => {
           const link = `/forms/${record.id}`;
           return (
-            <Space>
+            <Space direction={'horizontal'} align={"end"}>
               <Tooltip title="Open form">
                 <Button icon={<EyeOutlined />} onClick={() => navigate(link)}>
                   View
-                </Button>
-              </Tooltip>
-              <Tooltip title="Copy link">
-                <Button
-                  icon={<LinkOutlined />}
-                  onClick={async () => {
-                    try {
-                      const abs = `${window.location.origin}${link}`;
-                      await navigator.clipboard.writeText(abs);
-                      message.success('Link copied');
-                    } catch {
-                      message.error('Failed to copy link');
-                    }
-                  }}
-                >
-                  Copy Link
                 </Button>
               </Tooltip>
               <Popconfirm

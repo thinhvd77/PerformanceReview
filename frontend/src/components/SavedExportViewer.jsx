@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Layout, Typography, Space, Card, Button, Spin, Alert, message } from 'antd';
-import api from '../services/api';
-import SchemaTable from './FormViewer/components/SchemaTable';
-import UserInfo from '../components/UserInfo';
+import api from '../services/api.js';
+import SchemaTable from './SchemaTable.jsx';
+import UserInfo from './UserInfo.jsx';
 import logo from '../assets/logo_png.png';
-import { parseExcelForViewer } from '../utils/parseExcelForViewer';
+import { parseExcelForViewer } from '../utils/parseExcelForViewer.js';
 
 const { Header, Content } = Layout;
 const { Title, Text } = Typography;

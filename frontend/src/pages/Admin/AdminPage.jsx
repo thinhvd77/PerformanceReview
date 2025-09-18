@@ -1,9 +1,9 @@
 import React, {useState} from 'react';
 import {Tabs, Layout, Typography, Space, Image} from 'antd';
-import ImportTab from './ImportTab';
-import UserManagementTab from './UserManagementTab';
-import FormManagementTab from './FormManagementTab';
-import ExportsTab from './ExportsTab';
+import ImportTab from '../../components/ImportTab.jsx';
+import UserManagementTab from '../../components/UserManagementTab.jsx';
+import FormManagementTab from '../../components/FormManagementTab.jsx';
+import ExportsTab from '../../components/ExportsTab.jsx';
 import UserInfo from '../../components/UserInfo';
 import logo from '../../assets/logo_png.png'
 
@@ -42,9 +42,9 @@ export default function AdminPage() {
                     onChange={setActiveKey}
                     items={[{key: 'import', label: 'Import', children: <ImportTab/>}, {
                         key: 'forms',
-                        label: 'Form Management',
+                        label: 'Quản lý form',
                         children: <FormManagementTab/>
-                    }, {key: 'users', label: 'User Management', children: <UserManagementTab/>}, {key: 'exports', label: 'Saved Exports', children: <ExportsTab/>}]}
+                    }, {key: 'users', label: 'Quản lý người dùng', children: <UserManagementTab/>}, {key: 'exports', label: 'Form đã nộp', children: <ExportsTab/>}]}
                 />
             </Content>
         </Layout>);
