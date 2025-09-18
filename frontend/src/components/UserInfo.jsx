@@ -4,6 +4,7 @@ import {DownOutlined, LogoutOutlined, KeyOutlined} from '@ant-design/icons';
 import {authService} from '../services/authService';
 import ChangePasswordModal from './ChangePasswordModal';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/authContext';
 
 const {Text} = Typography;
 
@@ -11,6 +12,7 @@ export default function UserInfo({size = 'small'}) {
     const [user, setUser] = useState(() => authService.getCurrentUser());
     const [pwdOpen, setPwdOpen] = useState(false);
     const navigate = useNavigate();
+    const { logout } = useAuth();
 
     useEffect(() => {
         const onStorage = () => setUser(authService.getCurrentUser());
@@ -23,11 +25,7 @@ export default function UserInfo({size = 'small'}) {
     const name = user.fullname || user.username || '';
 
     const doLogout = () => {
-        try {
-            authService.logout();
-        } finally {
-            navigate('/login');
-        }
+        logout();
     };
 
     const items = [

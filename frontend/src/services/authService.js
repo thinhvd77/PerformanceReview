@@ -1,3 +1,4 @@
+// services/authService.js
 import api from './api';
 
 function decodeJwt(token) {
@@ -7,117 +8,93 @@ function decodeJwt(token) {
         const jsonPayload = decodeURIComponent(
             atob(base64)
                 .split('')
-                .map(function (c) {
-                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-                })
+                .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
                 .join('')
         );
         return JSON.parse(jsonPayload);
-    } catch (_) {
+    } catch {
         return null;
     }
 }
 
 export const authService = {
     register: async (userData) => {
-        const response = await api.post('/users/register', userData);
-        return response.data;
+        const { data } = await api.post('/users/register', userData);
+        return data;
     },
 
-    changePassword: async ({currentPassword, newPassword}) => {
-        const response = await api.post('/users/change-password', {currentPassword, newPassword});
-        return response.data;
+    changePassword: async ({ currentPassword, newPassword }) => {
+        const { data } = await api.post('/users/change-password', { currentPassword, newPassword });
+        return data;
     },
 
+    // Gọi API đăng nhập, lưu token/user vào localStorage (không điều hướng)
     login: async (credentials) => {
-        const response = await api.post('/users/login', credentials);
-        if (response.data.token) {
-            const token = response.data.token;
+        const { data } = await api.post('/users/login', credentials);
+        if (data?.token) {
+            const token = data.token;
             localStorage.setItem('token', token);
             const payload = decodeJwt(token) || {};
             const role = payload.role;
-            const user = {...(response.data.user || {}), role};
+            const user = { ...(data.user || {}), role };
             localStorage.setItem('user', JSON.stringify(user));
         }
-        return response.data;
+        return data;
     },
 
+    // Chỉ xóa dữ liệu auth — KHÔNG đụng tới history/location
     logout: () => {
-        // Clear all authentication data
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         sessionStorage.clear();
-        
-        // Clear browser history to prevent access to previous pages
-        if (window.history && window.history.pushState) {
-            // Replace current history entry with login page
-            window.history.replaceState(null, '', '/login');
-            // Clear forward history
-            window.history.pushState(null, '', '/login');
-            window.history.back();
-        }
     },
 
     getCurrentUser: () => {
-        const userStr = localStorage.getItem('user');
-        const token = localStorage.getItem('token');
-        
-        // Check if user data exists and token is valid
-        if (!userStr || !token || !authService.isValidToken(token)) {
-            // Clear invalid data
+        try {
+            const token = localStorage.getItem('token');
+            const userStr = localStorage.getItem('user');
+            if (!token || !userStr || !authService.isValidToken(token)) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                return null;
+            }
+            return JSON.parse(userStr);
+        } catch {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             return null;
         }
-        
-        return JSON.parse(userStr);
     },
 
-    getToken: () => {
-        return localStorage.getItem('token');
-    },
+    getToken: () => localStorage.getItem('token'),
 
     isValidToken: (token) => {
         if (!token) return false;
-        
         try {
             const payload = decodeJwt(token);
             if (!payload) return false;
-            
-            // Check if token has expired
-            const currentTime = Math.floor(Date.now() / 1000);
-            if (payload.exp && payload.exp < currentTime) {
-                return false;
-            }
-            
+            const now = Math.floor(Date.now() / 1000);
+            if (payload.exp && payload.exp < now) return false;
             return true;
-        } catch (error) {
+        } catch {
             return false;
         }
     },
 
     isTokenExpired: (token) => {
         if (!token) return true;
-        
         try {
             const payload = decodeJwt(token);
-            if (!payload || !payload.exp) return true;
-            
-            const currentTime = Math.floor(Date.now() / 1000);
-            return payload.exp < currentTime;
-        } catch (error) {
+            if (!payload?.exp) return true;
+            const now = Math.floor(Date.now() / 1000);
+            return payload.exp < now;
+        } catch {
             return true;
         }
     },
 
-    isAuthenticated: () => {
-        const token = localStorage.getItem('token');
-        const user = localStorage.getItem('user');
-        return !!(token && user && authService.isValidToken(token));
-    },
-
     getProfile: async () => {
-        const response = await api.get('/users/profile');
-        return response.data;
+        const { data } = await api.get('/users/profile');
+        return data;
     },
 };
