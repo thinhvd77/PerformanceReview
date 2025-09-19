@@ -25,25 +25,6 @@ export default function FormPage() {
     const departments = useMemo(() => (branchId ? orgData.departments[branchId] || [] : []), [branchId]);
     const positions = useMemo(() => (departmentId ? orgData.positions[departmentId] || [] : []), [departmentId]);
 
-    // Load last selection
-    // useEffect(() => {
-    //     try {
-    //         const b = localStorage.getItem('ufp.branchId') || undefined;
-    //         const d = localStorage.getItem('ufp.departmentId') || undefined;
-    //         const p = localStorage.getItem('ufp.positionId') || undefined;
-    //         if (b && (orgData.branches || []).some(x => x.id === b)) {
-    //             setBranchId(b);
-    //             if (d && (orgData.departments[b] || []).some(x => x.id === d)) {
-    //                 setDepartmentId(d);
-    //                 if (p && (orgData.positions[d] || []).some(x => x.id === p)) {
-    //                     setPositionId(p);
-    //                 }
-    //             }
-    //         }
-    //     } catch {
-    //     }
-    // }, []);
-
     // Persist selection
     useEffect(() => {
         if (branchId) localStorage.setItem('ufp.branchId', branchId); else localStorage.removeItem('ufp.branchId');

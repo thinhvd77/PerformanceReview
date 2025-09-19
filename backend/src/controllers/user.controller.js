@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import {AppDataSource} from '../config/database.js';
-import {User} from '../entities/User.js';
+import { AppDataSource } from '../config/database.js';
+import { User } from '../entities/User.js';
 
 const userRepository = AppDataSource.getRepository(User);
 
@@ -23,30 +23,77 @@ export const changePassword = async (req, res) => {
     }
 };
 
-// List users with optional pagination and search
+// List users with filtering, pagination and search
 export const listUsers = async (req, res) => {
     try {
+        // Pagination params
         const page = Math.max(1, parseInt(req.query.page || '1', 10));
         const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize || '50', 10)));
-        const q = (req.query.q || '').toString().trim();
 
-        const where = q
-            ? [
-                { username: AppDataSource.driver.escape ? undefined : undefined }, // placeholder to keep array shape
-              ]
-            : {};
+        // Filter params
+        const search = (req.query.search || '').toString().trim();
+        const role = (req.query.role || '').toString().trim();
+        const branch = (req.query.branch || '').toString().trim();
+        const department = (req.query.department || '').toString().trim();
+        const startDate = req.query.startDate ? new Date(req.query.startDate) : null;
+        const endDate = req.query.endDate ? new Date(req.query.endDate) : null;
 
-        // Build query builder to support LIKE search regardless of driver helper
+        // Build query builder
         const qb = userRepository.createQueryBuilder('u')
-            .select(['u.id', 'u.username', 'u.fullname', 'u.role', 'u.createdAt', 'u.updatedAt'])
-            .orderBy('u.id', 'ASC')
+            .select(['u.id', 'u.username', 'u.fullname', 'u.role', 'u.branch', 'u.department', 'u.createdAt', 'u.updatedAt']);
+
+        // Apply filters
+        if (search) {
+            qb.andWhere(
+                '(LOWER(u.username) LIKE :search OR LOWER(u.fullname) LIKE :search)',
+                { search: `%${search.toLowerCase()}%` }
+            );
+        }
+
+        if (role) {
+            qb.andWhere('u.role = :role', { role });
+        }
+
+        if (branch) {
+            qb.andWhere('u.branch = :branch', { branch });
+        }
+
+        if (department) {
+            qb.andWhere('u.department = :department', { department });
+        }
+
+        if (startDate) {
+            qb.andWhere('u.createdAt >= :startDate', { startDate });
+        }
+
+        if (endDate) {
+            qb.andWhere('u.createdAt <= :endDate', { endDate });
+        }
+
+        // Apply pagination
+        qb.orderBy('u.createdAt', 'DESC')
             .skip((page - 1) * pageSize)
             .take(pageSize);
-        if (q) {
-            qb.where('LOWER(u.username) LIKE :q OR LOWER(u.fullname) LIKE :q', { q: `%${q.toLowerCase()}%` });
-        }
+
+        // Get results with total count
         const [data, total] = await qb.getManyAndCount();
-        res.json({ data, total, page, pageSize });
+
+        // Respond data with specific fields 
+        res.json({
+            data: data.map(user => ({
+                username: user.username,
+                fullname: user.fullname,
+                branch: user.branch,
+                department: user.department,
+                role: user.role,
+            })),
+            metadata: {
+                total,
+                page,
+                pageSize,
+                totalPages: Math.ceil(total / pageSize)
+            }
+        });
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
     }
@@ -66,15 +113,15 @@ export const getUserById = async (req, res) => {
 
 export const register = async (req, res) => {
     try {
-        const {username, password, role, fullname} = req.body;
+        const { username, password, role, fullname, department, branch } = req.body;
 
         // Check if user exists
         const existingUser = await userRepository.findOne({
-            where: {username},
+            where: { username },
         });
 
         if (existingUser) {
-            return res.status(400).json({message: 'User already exists'});
+            return res.status(400).json({ message: 'User already exists' });
         }
 
         // Hash password
@@ -86,68 +133,70 @@ export const register = async (req, res) => {
             password: hashedPassword,
             role,
             fullname,
+            department,
+            branch
         });
 
         await userRepository.save(user);
 
         res.status(201).json({
             message: 'User created successfully',
-            user: {id: user.id, username: user.username, fullname: user.fullname, role: user.role},
+            user: { username: user.username, fullname: user.fullname, branch: user.branch, department: user.department},
         });
     } catch (error) {
-        res.status(500).json({message: 'Server error', error: error.message});
+        res.status(500).json({ message: 'Server error', error: error.message });
     }
 };
 
 export const login = async (req, res) => {
     try {
-        const {username, password} = req.body;
+        const { username, password } = req.body;
 
         // Find user
-        const user = await userRepository.findOne({where: {username}});
+        const user = await userRepository.findOne({ where: { username } });
 
         if (!user) {
-            return res.status(401).json({message: 'Người dùng không tồn tại'});
+            return res.status(401).json({ message: 'Người dùng không tồn tại' });
         }
 
         // Check password
         const isValidPassword = await bcrypt.compare(password, user.password);
 
         if (!isValidPassword) {
-            return res.status(401).json({message: 'Mật khẩu không đúng'});
+            return res.status(401).json({ message: 'Mật khẩu không đúng' });
         }
 
         // Generate token
         const token = jwt.sign(
-            {id: user.id, username: user.username, role: user.role},
+            { id: user.id, username: user.username, role: user.role },
             process.env.JWT_SECRET,
-            {expiresIn: '1d'}
+            { expiresIn: '1d' }
         );
 
         res.json({
             message: 'Login successful',
             token,
-            user: {username: user.username, fullname: user.fullname, role: user.role},
+            user: { username: user.username, fullname: user.fullname, role: user.role },
         });
     } catch (error) {
-        res.status(500).json({message: 'Server error', error: error.message});
+        res.status(500).json({ message: 'Server error', error: error.message });
     }
 };
 
 export const getProfile = async (req, res) => {
     try {
         const user = await userRepository.findOne({
-            where: {id: req.user.id},
+            where: { id: req.user.id },
             select: ['id', 'username', 'fullname', 'role', 'createdAt'],
         });
 
         if (!user) {
-            return res.status(404).json({message: 'User not found'});
+            return res.status(404).json({ message: 'User not found' });
         }
 
         res.json(user);
     } catch (error) {
-        res.status(500).json({message: 'Server error', error: error.message});
+        res.status(500).json({ message: 'Server error', error: error.message });
     }
 };
 
@@ -170,9 +219,9 @@ export const createUser = async (req, res) => {
 // Update user (admin)
 export const updateUser = async (req, res) => {
     try {
-        const id = parseInt(req.params.id, 10);
-        const { username, password, role, fullname } = req.body;
-        const user = await userRepository.findOne({ where: { id } });
+        const username = req.params.username;
+        const { password, role, fullname } = req.body;
+        const user = await userRepository.findOne({ where: { username } });
         if (!user) return res.status(404).json({ message: 'User not found' });
         if (username && username !== user.username) {
             const dup = await userRepository.findOne({ where: { username } });
@@ -192,8 +241,8 @@ export const updateUser = async (req, res) => {
 // Delete user (admin)
 export const deleteUser = async (req, res) => {
     try {
-        const id = parseInt(req.params.id, 10);
-        const user = await userRepository.findOne({ where: { id } });
+        const username = req.params.id;
+        const user = await userRepository.findOne({ where: { username } });
         if (!user) return res.status(404).json({ message: 'User not found' });
         await userRepository.remove(user);
         res.json({ message: 'User deleted' });

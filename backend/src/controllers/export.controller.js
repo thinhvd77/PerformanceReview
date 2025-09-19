@@ -41,7 +41,7 @@ export const createExport = async (req, res) => {
         if (!file) return res.status(400).json({message: 'No file uploaded'});
 
         const employee_code = req.user?.username;
-        const {employee_name, formId, fileName, departmentId, table} = req.body || {};
+        const {formId, fileName, table} = req.body || {};
 
         // Move file to exports subdir (it is currently in uploads root by multer config)
         const originalPath = path.join(process.cwd(), 'uploads', file.filename);
@@ -52,18 +52,13 @@ export const createExport = async (req, res) => {
         }
 
         const repo = AppDataSource.getRepository(ExportRecord.options.name);
-        // let parsedMeta = null;
-        // try { parsedMeta = meta ? (typeof meta === 'string' ? JSON.parse(meta) : meta) : null; } catch (_) {}
 
         const entity = repo.create({
             employee_code: employee_code,
-            employee_name: employee_name,
             formId: formId ? parseInt(formId, 10) : null,
             fileName: safeName,
             filePath: path.relative(process.cwd(), finalPath).replace(/\\/g, '/'),
-            departmentId: departmentId || null,
             table: table ? (typeof table === 'string' ? JSON.parse(table) : table) : null,
-            // meta: parsedMeta,
         });
         const saved = await repo.save(entity);
 

@@ -8,7 +8,7 @@ import {fileURLToPath} from 'url';
 import swaggerUi from 'swagger-ui-express';
 import {swaggerSpec} from './config/swaggerDef.js'
 import {AppDataSource} from './config/database.js';
-import userRoutes from './routes/userRoutes.js';
+import userRoutes from './routes/user.routes.js';
 import uploadRoutes from "./routes/upload.routes.js";
 import formTemplateRoutes from './routes/formTemplate.routes.js';
 import exportRoutes from './routes/export.routes.js';
