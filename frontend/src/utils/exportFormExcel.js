@@ -1,7 +1,7 @@
 import ExcelJS from 'exceljs';
 import {saveAs} from 'file-saver';
 
-const toCol = (n) => {
+export const toCol = (n) => {
     let s = '';
     while (n > 0) {
         const m = (n - 1) % 26;

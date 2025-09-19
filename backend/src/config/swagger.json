@@ -198,6 +198,18 @@
           "404": {"description": "Not found"}
         }
       }
+    },
+    "/api/records/export-record": {
+        "get": {
+            "summary": "Export form records to Excel",
+            "tags": ["Records"],
+            "responses": {
+            "200": {
+                "description": "Excel file"},
+            "400": {"description": "Bad request"},
+            "404": {"description": "Not found"}
+            }
+        }
     }
   },
   "components": {

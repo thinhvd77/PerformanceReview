@@ -19,6 +19,16 @@ export const User = new EntitySchema({
             length: 255,
             nullable: true,
         },
+        branch: {
+            type: 'varchar',
+            length: 255,
+            nullable: true,
+        },
+        department: {
+            type: 'varchar',
+            length: 255,
+            nullable: true,
+        },
         role: {
             type: 'varchar',
             length: 255,

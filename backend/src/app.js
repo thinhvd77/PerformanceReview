@@ -6,11 +6,13 @@ import path from 'path';
 import bcrypt from "bcryptjs";
 import {fileURLToPath} from 'url';
 import swaggerUi from 'swagger-ui-express';
+import {swaggerSpec} from './config/swaggerDef.js'
 import {AppDataSource} from './config/database.js';
 import userRoutes from './routes/userRoutes.js';
 import uploadRoutes from "./routes/upload.routes.js";
 import formTemplateRoutes from './routes/formTemplate.routes.js';
 import exportRoutes from './routes/export.routes.js';
+import recordRoutes from "./routes/record.routes.js";
 
 dotenv.config();
 
@@ -34,20 +36,21 @@ try {
     console.warn('Swagger spec not found or invalid. Swagger UI will be unavailable.', e.message);
 }
 
-if (Object.keys(swaggerDocument).length > 0) {
-    // Keep server URL in sync with current PORT
-    if (swaggerDocument.servers && swaggerDocument.servers.length > 0) {
-        swaggerDocument.servers[0].url = `http://localhost:${PORT}`;
-    }
-    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
-    app.get('/swagger.json', (req, res) => res.json(swaggerDocument));
-}
-
+// if (Object.keys(swaggerDocument).length > 0) {
+//     // Keep server URL in sync with current PORT
+//     if (swaggerDocument.servers && swaggerDocument.servers.length > 0) {
+//         swaggerDocument.servers[0].url = `http://localhost:${PORT}`;
+//     }
+//     app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+//     app.get('/swagger.json', (req, res) => res.json(swaggerDocument));
+// }
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 // Routes
 app.use('/api/users', userRoutes);
 app.use('/api/files', uploadRoutes);
 app.use('/api/forms', formTemplateRoutes);
 app.use('/api/exports', exportRoutes);
+app.use('/api/records', recordRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

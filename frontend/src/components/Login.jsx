@@ -27,7 +27,7 @@ const styles = {
 const Login = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { login, isAdmin } = useAuth();
+    const { login } = useAuth();
 
     const [formData, setFormData] = useState({ username:'', password:'' });
     const [error, setError] = useState('');
@@ -38,8 +38,7 @@ const Login = () => {
     const canSubmit = useMemo(() => !!formData.username && !!formData.password && !loading, [formData.username, formData.password, loading]);
 
     const handleChange = (e) => {
-        const {name, value} = e.target;
-        setFormData((prev) => ({...prev, [name]: value}));
+        setFormData({...formData, [e.target.name]: e.target.value});
     };
 
     const handleBlur = (e) => {
@@ -55,11 +54,13 @@ const Login = () => {
 
         setLoading(true);
         try {
-            await login(formData);
+            const loggedInUser = await login(formData);
+            console.log('Logged in user:', loggedInUser);
             // Quay lại trang gốc nếu có, nếu không: admin -> /admin, user -> /
-            const from = location.state?.from?.pathname || (isAdmin ? '/admin' : '/');
+            const from = location.state?.from?.pathname || (loggedInUser.role === 'Admin' ? '/admin' : '/');
             navigate(from, { replace: true });
         } catch (err) {
+            console.error('Login error:', err);
             setError(err?.response?.data?.message || 'Login failed. Please try again.');
         } finally {
             setLoading(false);

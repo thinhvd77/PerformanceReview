@@ -20,7 +20,7 @@ import {
 import SchemaTable from './SchemaTable.jsx';
 import {buildInitialInputs, buildCellMap, computeComputedByAddr} from '../utils/formulaEngine.js';
 import exportFormExcel from '../utils/exportFormExcel.js';
-import {authService} from '../services/authService.js';
+import {useAuth} from "../contexts/authContext.jsx";
 import {orgData, findNameById} from '../data/orgData.js';
 import { saveAs } from 'file-saver';
 
@@ -83,6 +83,7 @@ const SECTION_OPTIONS = {
 
 export default function FormViewer({formId}) {
     const {id: routeId} = useParams();
+    const {user} = useAuth();
     const id = formId ?? routeId;
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -324,7 +325,7 @@ export default function FormViewer({formId}) {
     const handleExport = async () => {
         try {
             // Map user fullname -> employee_name and selected position -> role
-            const current = authService.getCurrentUser();
+            const current = user;
             const employee_name = current?.fullname || current?.username || '';
 
             let role = '';
@@ -363,21 +364,24 @@ export default function FormViewer({formId}) {
                 const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
                 const fd = new FormData();
                 fd.append('file', blob, fileName);
+                fd.append('employee_name', employee_name);
                 fd.append('fileName', fileName);
                 fd.append('formId', id || template?.id || '');
-                const meta = {
-                    employee_name,
-                    role,
-                    branchId,
-                    departmentId,
-                    positionId,
-                    table,
-                    cellInputs,
-                    computedByAddr,
-                    title: formTitle,
-                    exportedAt: new Date().toISOString(),
-                };
-                fd.append('meta', JSON.stringify(meta));
+                // const meta = {
+                //     employee_name,
+                //     role,
+                //     branchId,
+                //     departmentId,
+                //     positionId,
+                //     table,
+                //     cellInputs,
+                //     computedByAddr,
+                //     title: formTitle,
+                //     exportedAt: new Date().toISOString(),
+                // };
+                // fd.append('meta', JSON.stringify(meta));
+                fd.append('departmentId', departmentId);
+                fd.append('table', JSON.stringify(table));
                 const resp = await api.post('/exports', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
                 const exportId = resp?.data?.id;
                 if (exportId) {

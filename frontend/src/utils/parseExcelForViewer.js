@@ -1,22 +1,23 @@
 // parseExcelForViewer.js
 import ExcelJS from 'exceljs';
+import {toCol} from "./exportFormExcel.js";
 
 // 1 -> A
-const toCol = (n) => {
-    let s = '';
-    while (n > 0) {
-        const m = (n - 1) % 26;
-        s = String.fromCharCode(65 + m) + s;
-        n = Math.floor((n - 1) / 26);
-    }
-    return s;
-};
+// const toCol = (n) => {
+//     let s = '';
+//     while (n > 0) {
+//         const m = (n - 1) % 26;
+//         s = String.fromCharCode(65 + m) + s;
+//         n = Math.floor((n - 1) / 26);
+//     }
+//     return s;
+// };
 const colToNum = (letters) =>
     letters.split('').reduce((n, ch) => n * 26 + (ch.charCodeAt(0) - 64), 0);
 const addr = (r, c) => `${toCol(c)}${r}`;
 
 // Extract numFmt robustly
-const getNumFmt = (cell) => {
+const getNumFmtFe = (cell) => {
     if (!cell) return null;
     const src = (cell.isMerged && cell.master) ? cell.master : cell;
     return src.numFmt || src?.style?.numFmt || null;
@@ -187,7 +188,7 @@ export async function parseExcelForViewer(arrayBuffer) {
                 formula = raw.formula.startsWith('=') ? raw.formula : `=${raw.formula}`;
             }
 
-            const numFmt = getNumFmt(cell);
+            const numFmt = getNumFmtFe(cell);
             const percent = isPercentFmt(numFmt);
             const hasFill = !!(cell?.fill?.fgColor || (cell?.isMerged && cell?.master?.fill?.fgColor));
 

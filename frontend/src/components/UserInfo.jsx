@@ -1,24 +1,23 @@
 import React, {useEffect, useState} from 'react';
 import {Typography, Dropdown, Button, Modal} from 'antd';
 import {DownOutlined, LogoutOutlined, KeyOutlined} from '@ant-design/icons';
-import {authService} from '../services/authService';
 import ChangePasswordModal from './ChangePasswordModal';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/authContext';
+import {useNavigate} from 'react-router-dom';
+import {useAuth} from '../contexts/authContext';
 
 const {Text} = Typography;
-
 export default function UserInfo({size = 'small'}) {
-    const [user, setUser] = useState(() => authService.getCurrentUser());
+    const {user} = useAuth();
+    // const [userInfo, setUser] = useState(null);
     const [pwdOpen, setPwdOpen] = useState(false);
     const navigate = useNavigate();
-    const { logout } = useAuth();
+    const {logout} = useAuth();
 
-    useEffect(() => {
-        const onStorage = () => setUser(authService.getCurrentUser());
-        window.addEventListener('storage', onStorage);
-        return () => window.removeEventListener('storage', onStorage);
-    }, []);
+    // useEffect(() => {
+    //     const onStorage = () => setUser(user);
+    //     window.addEventListener('storage', onStorage);
+    //     return () => window.removeEventListener('storage', onStorage);
+    // }, []);
 
     if (!user) return null;
 
@@ -32,8 +31,8 @@ export default function UserInfo({size = 'small'}) {
         {
             key: 'change-password',
             label: (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <KeyOutlined /> Đổi mật khẩu
+                <div style={{display: 'flex', alignItems: 'center', gap: 8}}>
+                    <KeyOutlined/> Đổi mật khẩu
                 </div>
             ),
             onClick: () => setPwdOpen(true),
@@ -45,8 +44,8 @@ export default function UserInfo({size = 'small'}) {
             key: 'logout',
             danger: true,
             label: (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <LogoutOutlined /> Đăng xuất
+                <div style={{display: 'flex', alignItems: 'center', gap: 8}}>
+                    <LogoutOutlined/> Đăng xuất
                 </div>
             ),
             onClick: () => {
@@ -64,16 +63,16 @@ export default function UserInfo({size = 'small'}) {
     return (
         <>
             <Dropdown
-                menu={{ items }}
+                menu={{items}}
                 placement="bottomRight"
                 trigger={['click']}
             >
-                <Button type="text" style={{ color: 'white' }} size={size}>
-                    <Text strong style={{ color: 'white' }}>{name}</Text>
-                    <DownOutlined style={{ marginLeft: 6 }} />
+                <Button type="text" style={{color: 'white'}} size={size}>
+                    <Text strong style={{color: 'white'}}>{name}</Text>
+                    <DownOutlined style={{marginLeft: 6}}/>
                 </Button>
             </Dropdown>
-            <ChangePasswordModal open={pwdOpen} onClose={() => setPwdOpen(false)} />
+            <ChangePasswordModal open={pwdOpen} onClose={() => setPwdOpen(false)}/>
         </>
     );
 }

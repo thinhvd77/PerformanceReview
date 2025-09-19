@@ -8,15 +8,15 @@ import SavedExportViewer from './components/SavedExportViewer.jsx';
 import { useAuth } from './contexts/authContext.jsx';
 
 const PrivateRoute = ({ children, adminOnly = false }) => {
-    const { isAuthenticated, isAdmin } = useAuth();
+    const { user } = useAuth();
     const location = useLocation();
 
-    if (!isAuthenticated) {
+    if (!user) {
         // Lưu nơi người dùng định vào để login xong quay lại
         return <Navigate to="/login" replace state={{ from: location }} />;
     }
 
-    if (adminOnly && !isAdmin) {
+    if (adminOnly && user.role !== 'Admin') {
         return <Navigate to="/" replace />;
     }
 
@@ -32,6 +32,7 @@ const GuestOnly = ({ children }) => {
 
 const AuthRedirect = () => {
     const { isAuthenticated, isAdmin } = useAuth();
+    console.log('AuthRedirect - isAuthenticated:', isAuthenticated, 'isAdmin:', isAdmin);
     if (!isAuthenticated) {
         return <Navigate to="/login" replace />;
     }
