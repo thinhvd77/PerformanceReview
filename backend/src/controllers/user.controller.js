@@ -219,8 +219,8 @@ export const createUser = async (req, res) => {
 // Update user (admin)
 export const updateUser = async (req, res) => {
     try {
-        const username = req.params.username;
-        const { password, role, fullname } = req.body;
+        const username = req.params.id;
+        const { password, role, fullname, branch, department } = req.body;
         const user = await userRepository.findOne({ where: { username } });
         if (!user) return res.status(404).json({ message: 'User not found' });
         if (username && username !== user.username) {
@@ -230,9 +230,11 @@ export const updateUser = async (req, res) => {
         }
         if (typeof fullname === 'string') user.fullname = fullname;
         if (typeof role === 'string') user.role = role;
+        if (typeof branch === 'string') user.branch = branch;
+        if (typeof department === 'string') user.department = department;
         if (password) user.password = await bcrypt.hash(password, 10);
         await userRepository.save(user);
-        res.json({ message: 'User updated', user: { id: user.id, username: user.username, fullname: user.fullname, role: user.role } });
+        res.json({ message: 'User updated', user: { id: user.id, username: user.username, fullname: user.fullname, role: user.role, branch: user.branch, department: user.department } });
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
     }

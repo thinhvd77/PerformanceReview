@@ -117,10 +117,12 @@ export default function UserManagementTab() {
 
     const onEditFinish = async (values) => {
         if (!currentUser) return;
+        console.log(currentUser, values);
         setEditing(true);
         try {
-            const res = await userService.update(currentUser.username, values);
+            const res = await userService.update(values.username, values);
             message.success("User updated");
+            // Update user in list
             setUsers((prev) =>
                 prev.map((u) =>
                     u.username === currentUser.username ? res.user : u

@@ -1,4 +1,4 @@
-import {getExportRecord, getRecordByDeptId} from "../services/export.service.js";
+import {getExportRecord, getRecordByEmpId} from "../services/export.service.js";
 
 export const getExportRecordController = async (req, res) => {
     try {
@@ -10,19 +10,19 @@ export const getExportRecordController = async (req, res) => {
     }
 }
 
-export const getRecordByDeptIdController = async (req, res) => {
-    const {deptId} = req.query;
-    if (!deptId) {
-        return res.status(400).json({message: 'deptId query parameter is required'});
+export const getRecordByEmpIdController = async (req, res) => {
+    const { empId } = req.query;
+    if (!empId) {
+        return res.status(400).json({ message: 'empId query parameter is required' });
     }
     try {
-        const record = await getRecordByDeptId(deptId);
+        const record = await getRecordByEmpId(empId);
         if (!record) {
-            return res.status(404).json({message: 'No record found for the given department ID'});
+            return res.status(404).json({message: 'No record found for the given employee ID'});
         }
         res.status(200).json(record);
     } catch (error) {
-        console.error('Error fetching record by department ID:', error);
-        res.status(500).json({message: 'Error fetching record by department ID', error: error.message});
+        console.error('Error fetching record by employee ID:', error);
+        res.status(500).json({message: 'Error fetching record by employee ID', error: error.message});
     }
 }

@@ -6,11 +6,11 @@ export const getExportRecord = () => {
     return repo.findOneBy({});
 }
 
-export const getRecordByDeptId = (deptId) => {
+export const getRecordByEmpId = (empId) => {
     const repo = AppDataSource.getRepository('ExportRecord');
     return repo.find({
         where: {
-            departmentId: deptId
+            employee_code: empId
         },
         order: {
             createdAt: 'DESC'

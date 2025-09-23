@@ -404,7 +404,7 @@ export default function FormViewer({ formId }) {
                 }
             } catch {}
 
-            const fileName = `Phieu_tu_danh_gia_${new Date()
+            const fileName = `Phieu_tu_danh_gia_${user.username}_${new Date()
                 .toISOString()
                 .slice(0, 10)}.xlsx`;
 
@@ -434,6 +434,8 @@ export default function FormViewer({ formId }) {
                 fd.append("fileName", fileName);
                 fd.append("formId", id || template?.id || "");
                 fd.append("table", JSON.stringify(table));
+                console.log(table);
+                
                 const resp = await api.post("/exports", fd, {
                     headers: { "Content-Type": "multipart/form-data" },
                 });

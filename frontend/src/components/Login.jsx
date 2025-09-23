@@ -56,9 +56,11 @@ const Login = () => {
         try {
             const loggedInUser = await login(formData);
             console.log('Logged in user:', loggedInUser);
-            // Quay lại trang gốc nếu có, nếu không: admin -> /admin, user -> /
-            const from = location.state?.from?.pathname || (loggedInUser.role === 'Admin' ? '/admin' : '/');
-            navigate(from, { replace: true });
+            // Quay lại trang gốc nếu có, nếu không: điều hướng theo role
+            const from = location.state?.from?.pathname;
+            const role = (loggedInUser.role || '').toString().toLowerCase();
+            const fallback = role === 'admin' ? '/admin' : role === 'manager' ? '/dashboard' : '/';
+            navigate(from || fallback, { replace: true });
         } catch (err) {
             console.error('Login error:', err);
             setError(err?.response?.data?.message || 'Login failed. Please try again.');
@@ -89,6 +91,7 @@ const Login = () => {
                                 id="username"
                                 type="text"
                                 name="username"
+                                autoComplete="off"
                                 value={formData.username}
                                 onChange={handleChange}
                                 onBlur={handleBlur}
@@ -115,6 +118,7 @@ const Login = () => {
                                 id="password"
                                 type={showPassword ? 'text' : 'password'}
                                 name="password"
+                                autoComplete="off"
                                 value={formData.password}
                                 onChange={handleChange}
                                 onBlur={handleBlur}

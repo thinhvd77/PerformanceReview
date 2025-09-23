@@ -125,11 +125,13 @@ export function AuthProvider({children}) {
         []
     );
 
+    const normalizedRole = (user?.role || '').toString().toLowerCase();
     const isAuthenticated = !!user;
-    const isAdmin = user?.role === 'Admin';
+    const isAdmin = normalizedRole === 'admin';
+    const isManager = normalizedRole === 'manager';
 
     return <AuthContext.Provider
-        value={{user, login, logout, isAuthenticated, isAdmin}}>{children}</AuthContext.Provider>;
+        value={{user, login, logout, isAuthenticated, isAdmin, isManager}}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

@@ -3,11 +3,12 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Login from './components/Login';
 import FormViewer from "./components/FormViewer.jsx";
 import AdminPage from './pages/Admin/AdminPage';
+import DashboardPage from './pages/Dashboard/DashboardPage.jsx';
 import FormPage from './pages/User/FormPage.jsx';
 import SavedExportViewer from './components/SavedExportViewer.jsx';
 import { useAuth } from './contexts/authContext.jsx';
 
-const PrivateRoute = ({ children, adminOnly = false }) => {
+const PrivateRoute = ({ children, adminOnly = false, allowedRoles = [] }) => {
     const { user } = useAuth();
     const location = useLocation();
 
@@ -16,23 +17,32 @@ const PrivateRoute = ({ children, adminOnly = false }) => {
         return <Navigate to="/login" replace state={{ from: location }} />;
     }
 
-    if (adminOnly && user.role !== 'Admin') {
+    const userRole = (user.role || '').toString().toLowerCase();
+
+    if (adminOnly && userRole !== 'admin') {
         return <Navigate to="/" replace />;
+    }
+
+    if (Array.isArray(allowedRoles) && allowedRoles.length > 0) {
+        const normalizedAllowed = allowedRoles.map((role) => role.toLowerCase());
+        if (!normalizedAllowed.includes(userRole)) {
+            return <Navigate to="/" replace />;
+        }
     }
 
     return children;
 };
 
 const GuestOnly = ({ children }) => {
-    const { isAuthenticated, isAdmin } = useAuth();
+    const { isAuthenticated, isAdmin, isManager } = useAuth();
     if (!isAuthenticated) return children;
     // Đã đăng nhập: không cho vào lại /login
-    return <Navigate to={isAdmin ? '/admin' : '/'} replace />;
+    const target = isAdmin ? '/admin' : isManager ? '/' : '/';
+    return <Navigate to={target} replace />;
 };
 
 const AuthRedirect = () => {
-    const { isAuthenticated, isAdmin } = useAuth();
-    console.log('AuthRedirect - isAuthenticated:', isAuthenticated, 'isAdmin:', isAdmin);
+    const { isAuthenticated, isAdmin, isManager } = useAuth();
     if (!isAuthenticated) {
         return <Navigate to="/login" replace />;
     }
@@ -40,6 +50,9 @@ const AuthRedirect = () => {
     if (isAdmin) {
         return <Navigate to="/admin" replace />;
     }
+    // if (isManager) {
+    //     return <Navigate to="/" replace />;
+    // }
     return <FormPage />;
 };
 
@@ -61,6 +74,14 @@ function App() {
                     element={
                         <PrivateRoute>
                             <FormViewer />
+                        </PrivateRoute>
+                    }
+                />
+                <Route
+                    path="/dashboard"
+                    element={
+                        <PrivateRoute allowedRoles={["manager"]}>
+                            <DashboardPage />
                         </PrivateRoute>
                     }
                 />
