@@ -39,8 +39,18 @@ const departmentOptions = {
     gd: "Ban Giám đốc",
 };
 
+const roleOptions = {
+    admin: "Admin",
+    employee: "Nhân viên",
+    manager: "Trưởng phòng",
+    deputy_manager: "Phó phòng",
+    director: "Giám đốc",
+    deputy_director: "Phó giám đốc",
+};
+
 const findBranchName = (code) => branchOptions[code] || code;
 const findDepartmentName = (code) => departmentOptions[code] || code;
+const findRoleName = (code) => roleOptions[code] || code;
 
 export default function UserManagementTab() {
     const [filters, setFilters] = useState({
@@ -190,6 +200,7 @@ export default function UserManagementTab() {
             title: "Vai trò",
             dataIndex: "role",
             key: "role",
+            render: (value) => (value ? findRoleName(value) : "—"),
         },
         {
             title: "Chi nhánh",
@@ -275,6 +286,7 @@ export default function UserManagementTab() {
                                     page: 1,
                                 });
                             }}
+                            allowClear
                             placeholder="-- Chọn chi nhánh --"
                             options={[
                                 { value: "hs", label: "Hội sở" },
@@ -289,6 +301,7 @@ export default function UserManagementTab() {
                             size="large"
                             style={{ width: "100%" }}
                             placeholder="-- Chọn phòng ban --"
+                            allowClear
                             onChange={(value) => {
                                 setFilters((prev) => ({
                                     ...prev,
@@ -641,7 +654,10 @@ export default function UserManagementTab() {
                                     value: "employee",
                                     label: "Nhân viên",
                                 },
-                                { value: "manager", label: "Quản lý" },
+                                { value: "manager", label: "Trưởng phòng" },
+                                { value: "deputy_manager", label: "Phó phòng" },
+                                { value: "director", label: "Giám đốc" },
+                                { value: "deputy_director", label: "Phó giám đốc" },
                             ]}
                             style={{ maxWidth: 240 }}
                         />

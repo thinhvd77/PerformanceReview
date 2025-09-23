@@ -70,8 +70,35 @@ export const listUsers = async (req, res) => {
             qb.andWhere('u.createdAt <= :endDate', { endDate });
         }
 
-        // Apply pagination
-        qb.orderBy('u.createdAt', 'DESC')
+        const branchRolePriorityCase = `
+            CASE
+                WHEN u.branch = 'hs' AND u.department = 'gd' AND u.role = 'director' THEN 0
+                WHEN u.branch = 'hs' AND u.department = 'gd' AND u.role = 'deputy_director' THEN 1
+                WHEN u.branch = 'hs' AND u.department = 'gd' THEN 2
+                WHEN u.branch = 'hs' THEN 3
+                WHEN u.branch = 'cn6' THEN 4
+                WHEN u.branch = 'nh' THEN 5
+                ELSE 6
+            END
+        `.trim();
+
+        const rolePriorityCase = `
+            CASE
+                WHEN u.branch = 'hs' AND u.department = 'gd' AND u.role = 'director' THEN 0
+                WHEN u.branch = 'hs' AND u.department = 'gd' AND u.role = 'deputy_director' THEN 1
+                WHEN u.role = 'manager' OR (u.role = 'director' AND NOT (u.branch = 'hs' AND u.department = 'gd')) THEN 2
+                WHEN u.role = 'deputy_manager' OR (u.role = 'deputy_director' AND NOT (u.branch = 'hs' AND u.department = 'gd')) THEN 3
+                WHEN u.role = 'employee' THEN 4
+                WHEN u.role = 'admin' THEN 5
+                ELSE 6
+            END
+        `.trim();
+
+        // Apply pagination with custom ordering (HS leadership first, then departments, CN6 và NH)
+        qb.orderBy(branchRolePriorityCase, 'ASC')
+            .addOrderBy('u.department', 'ASC')
+            .addOrderBy(rolePriorityCase, 'ASC')
+            .addOrderBy('u.fullname', 'ASC')
             .skip((page - 1) * pageSize)
             .take(pageSize);
 
