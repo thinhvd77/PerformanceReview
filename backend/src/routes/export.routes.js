@@ -1,8 +1,8 @@
 import express from 'express';
 import multer from 'multer';
 import path from 'path';
-import { authenticateToken } from '../middlewares/auth.js';
-import { listExports, createExport, getExport, downloadExport, listDepartmentSubmissions, exportDepartmentSummary } from '../controllers/export.controller.js';
+import { authenticateToken, authorizeRole } from '../middlewares/auth.js';
+import { listExports, createExport, getExport, downloadExport, listDepartmentSubmissions, exportDepartmentSummary, deleteExport } from '../controllers/export.controller.js';
 
 const router = express.Router();
 
@@ -23,5 +23,6 @@ router.get('/department-summary', authenticateToken, exportDepartmentSummary);
 router.post('/', authenticateToken, upload.single('file'), createExport);
 router.get('/:id', authenticateToken, getExport);
 router.get('/:id/download', authenticateToken, downloadExport);
+router.delete('/:id', authenticateToken, authorizeRole('Admin'), deleteExport);
 
 export default router;

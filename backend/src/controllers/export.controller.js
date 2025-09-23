@@ -337,6 +337,58 @@ const extractSummaryFromFile = async (filePath) => {
     };
 };
 
+const extractAverageScoreFromFile = async (filePath) => {
+    if (!filePath || !fs.existsSync(filePath)) return null;
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.readFile(filePath);
+    const ws = workbook.worksheets[0];
+    if (!ws) return null;
+
+    const colCount = ws.actualColumnCount || ws.columnCount || 0;
+    const rowCount = ws.actualRowCount || ws.rowCount || 0;
+    if (!colCount || !rowCount) return null;
+
+    let headerRowIndex = null;
+    for (let r = 1; r <= Math.min(rowCount, 40); r += 1) {
+        const text = norm(getCellText(ws.getRow(r).getCell(1)));
+        if (text.startsWith('stt')) {
+            headerRowIndex = r;
+            break;
+        }
+    }
+    if (!headerRowIndex) headerRowIndex = 11;
+
+    const columns = [];
+    for (let c = 1; c <= colCount; c += 1) {
+        columns.push({ label: getCellText(ws.getRow(headerRowIndex).getCell(c)) });
+    }
+    const scoreColIdx = findScoreColumnIndex(columns);
+    const scoreColExcel = scoreColIdx + 1;
+
+    let total = 0;
+    let count = 0;
+    for (let r = headerRowIndex + 1; r <= rowCount; r += 1) {
+        const row = ws.getRow(r);
+        const cell = row.getCell(scoreColExcel);
+        const rawValue = cell?.value;
+        let score = null;
+        if (typeof rawValue === 'number' && Number.isFinite(rawValue)) {
+            score = rawValue;
+        } else {
+            const text = getCellText(cell).trim();
+            score = parseNumberAnyLocale(text);
+        }
+        if (score != null) {
+            if (score > 2 && score <= 100) score /= 100;
+            total += score;
+            count += 1;
+        }
+    }
+
+    if (!count) return null;
+    return total / count;
+};
+
 const getRecordSummary = async (record) => {
     let summary = null;
     try {
@@ -563,5 +615,38 @@ export const downloadExport = async (req, res) => {
         res.download(absPath, entity.fileName || path.basename(absPath));
     } catch (err) {
         res.status(500).json({message: 'Failed to download export'});
+    }
+};
+
+export const deleteExport = async (req, res) => {
+    try {
+        const id = parseInt(req.params.id, 10);
+        if (!Number.isFinite(id)) {
+            return res.status(400).json({message: 'Invalid export id'});
+        }
+
+        const repo = AppDataSource.getRepository(ExportRecord.options.name);
+        const record = await repo.findOne({where: {id}});
+        if (!record) {
+            return res.status(404).json({message: 'Export record not found'});
+        }
+
+        if (record.filePath) {
+            const absPath = path.join(process.cwd(), record.filePath);
+            try {
+                await fs.promises.unlink(absPath);
+            } catch (fileErr) {
+                if (fileErr.code !== 'ENOENT') {
+                    console.warn(`Failed to remove export file ${absPath}:`, fileErr);
+                }
+            }
+        }
+
+        await repo.remove(record);
+
+        return res.json({message: 'Export record deleted'});
+    } catch (err) {
+        console.error('deleteExport error:', err);
+        return res.status(500).json({message: 'Failed to delete export'});
     }
 };

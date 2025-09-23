@@ -1,9 +1,10 @@
 import React, {useEffect, useMemo, useState} from 'react';
-import {Card, Typography, Space, Input, Button, Table, Tag, message, Select} from 'antd';
-import {DownloadOutlined, SearchOutlined, ReloadOutlined, EyeOutlined} from '@ant-design/icons';
+import {Card, Typography, Space, Input, Button, Table, Tag, message, Select, Popconfirm} from 'antd';
+import {DownloadOutlined, SearchOutlined, ReloadOutlined, EyeOutlined, DeleteOutlined} from '@ant-design/icons';
 import api from '../services/api.js';
 import {saveAs} from 'file-saver';
 import {useNavigate} from 'react-router-dom';
+import {useAuth} from '../contexts/authContext.jsx';
 
 const {Title, Text} = Typography;
 
@@ -18,6 +19,8 @@ export default function ExportsTab() {
     const [rows, setRows] = useState([]);
     const [loading, setLoading] = useState(false);
     const [downloadingId, setDownloadingId] = useState(null);
+    const [deletingId, setDeletingId] = useState(null);
+    const {isAdmin} = useAuth();
 
     // Extract unique branch and department options from data
     const branchOptions = useMemo(() => {
@@ -82,7 +85,22 @@ export default function ExportsTab() {
         }
     };
 
-    const columns = useMemo(() => [
+    const handleDelete = async (record) => {
+        if (!record?.id) return;
+        setDeletingId(record.id);
+        try {
+            await api.delete(`/exports/${record.id}`);
+            message.success('Đã xóa form đã nộp');
+            await fetchList();
+        } catch (e) {
+            const msg = e?.response?.data?.message || e.message || 'Xóa form thất bại';
+            message.error(msg);
+        } finally {
+            setDeletingId(null);
+        }
+    };
+
+    const columns = [
         {title: 'Mã nhân viên', render: (_, r) => r?.employee_code || '-', width: 180},
         {
             title: 'Họ và tên',
@@ -131,10 +149,27 @@ export default function ExportsTab() {
                     >
                         Tải
                     </Button>
+                    {isAdmin && (
+                        <Popconfirm
+                            title="Bạn có chắc muốn xóa form này?"
+                            okText="Xóa"
+                            cancelText="Hủy"
+                            onConfirm={() => handleDelete(r)}
+                        >
+                            <Button
+                                size="small"
+                                danger
+                                icon={<DeleteOutlined/>}
+                                disabled={deletingId === r.id || loading}
+                            >
+                                Xóa
+                            </Button>
+                        </Popconfirm>
+                    )}
                 </Space>
             ),
         },
-    ], [downloadingId, navigate]);
+    ];
 
     return (
         <div style={{maxWidth: 1300, margin: '0 auto'}}>

@@ -417,6 +417,7 @@ export default function FormViewer({ formId }) {
                 title: "BẢNG TỰ ĐÁNH GIÁ MỨC ĐỘ HOÀN THÀNH CÔNG VIỆC",
                 employee_name,
                 role,
+                branch: branchId,
                 protectSheet: true,
                 protectPassword: "Admin@6421",
                 readOnly: true,
