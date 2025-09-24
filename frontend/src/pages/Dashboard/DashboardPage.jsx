@@ -11,6 +11,7 @@ import {
     Button,
     Modal,
     message,
+    Select,
 } from "antd";
 import { ReloadOutlined, DownloadOutlined } from "@ant-design/icons";
 import api from "../../services/api.js";
@@ -19,6 +20,7 @@ import SchemaTable from "../../components/SchemaTable.jsx";
 import { parseExcelForViewer } from "../../utils/parseExcelForViewer.js";
 import logo from "../../assets/logo_png.png";
 import { saveAs } from "file-saver";
+import { useAuth } from "../../contexts/authContext.jsx";
 const { Header, Content } = Layout;
 const { Title, Text } = Typography;
 const formatDateTime = (value) => {
@@ -37,7 +39,54 @@ const formatDateTime = (value) => {
         return String(value);
     }
 };
+
+const branchOptions = [
+    { value: "hs", label: "Hội sở" },
+    { value: "cn6", label: "Chi nhánh 6" },
+    { value: "nh", label: "Chi nhánh Nam Hoa" },
+];
+
+const departmentOptionsByBranch = {
+    hs: [
+        { value: "kt", label: "Kế toán & ngân quỹ" },
+        { value: "pgd", label: "Phòng giao dịch Bình Tây" },
+        { value: "cn", label: "Phòng Khách hàng cá nhân" },
+        { value: "dn", label: "Phòng Khách hàng doanh nghiệp" },
+        { value: "th", label: "Phòng Tổng hợp" },
+        { value: "ktgs", label: "Phòng Kiểm tra giám sát nội bộ" },
+        { value: "qlrr", label: "Phòng Kế hoạch & quản lý rủi ro" },
+        { value: "gd", label: "Ban giám đốc" },
+        { value: "kh", label: "Phòng Khách hàng" },
+    ],
+    cn6: [
+        { value: "cn6-kt", label: "Kế toán & ngân quỹ" },
+        { value: "cn6-kh", label: "Phòng Khách hàng" },
+        { value: "cn6-gd", label: "Ban giám đốc" },
+    ],
+    nh: [
+        { value: "nh-kt", label: "Kế toán & ngân quỹ" },
+        { value: "nh-kh", label: "Phòng Khách hàng" },
+        { value: "nh-gd", label: "Ban giám đốc" },
+    ],
+};
+
+const branchLabelMap = branchOptions.reduce((acc, item) => {
+    acc[item.value] = item.label;
+    return acc;
+}, {});
+
+const getBranchLabel = (branchId) => branchLabelMap[branchId] || branchId || "";
+
+const getDepartmentLabel = (branchId, departmentId) => {
+    if (!departmentId) return "";
+    const list = departmentOptionsByBranch[branchId] || [];
+    return list.find((item) => item.value === departmentId)?.label || departmentId;
+};
 export default function DashboardPage() {
+    const { user } = useAuth();
+    const normalizedRole = (user?.role || "").toString().toLowerCase();
+    const normalizedDepartment = (user?.department || "").toString().toLowerCase();
+    const isQLRRManager = normalizedRole === "manager" && normalizedDepartment === "qlrr";
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState("");
@@ -50,6 +99,8 @@ export default function DashboardPage() {
     const [parsing, setParsing] = useState(false);
     const [parseError, setParseError] = useState("");
     const [exporting, setExporting] = useState(false);
+    const [targetBranch, setTargetBranch] = useState("");
+    const [targetDepartment, setTargetDepartment] = useState("");
     const applyResponse = useCallback((data) => {
         const rows = Array.isArray(data?.submissions) ? data.submissions : [];
         setBranch(data?.branch || "");
@@ -91,6 +142,21 @@ export default function DashboardPage() {
             cancelled = true;
         };
     }, [applyResponse]);
+
+    useEffect(() => {
+        if (!isQLRRManager) return;
+        const preferredBranch = branch || user?.branch || "hs";
+        setTargetBranch((prev) => prev || preferredBranch);
+    }, [isQLRRManager, branch, user?.branch]);
+
+    useEffect(() => {
+        if (!isQLRRManager) return;
+        const branchForOptions = targetBranch || branch || user?.branch || "hs";
+        const options = departmentOptionsByBranch[branchForOptions] || [];
+        setTargetDepartment((prev) =>
+            prev && options.some((item) => item.value === prev) ? prev : ""
+        );
+    }, [isQLRRManager, targetBranch, branch, user?.branch]);
     const handleRefresh = useCallback(async () => {
         setRefreshing(true);
         setError("");
@@ -111,11 +177,38 @@ export default function DashboardPage() {
             setRefreshing(false);
         }
     }, [applyResponse]);
+
+    const selectableDepartments = useMemo(() => {
+        const branchId = targetBranch || branch || user?.branch || "hs";
+        let list = departmentOptionsByBranch[branchId] || [];
+        if (
+            isQLRRManager &&
+            normalizedDepartment &&
+            (branchId === (branch || user?.branch || "hs"))
+        ) {
+            list = list.filter((item) => item.value !== normalizedDepartment);
+        }
+        return list;
+    }, [targetBranch, branch, user?.branch, isQLRRManager, normalizedDepartment]);
     const handleExportSummary = useCallback(async () => {
+        if (isQLRRManager && !targetDepartment) {
+            message.warning("Vui lòng chọn phòng ban muốn xuất");
+            return;
+        }
         setExporting(true);
         try {
+            const effectiveBranch = isQLRRManager
+                ? targetBranch || branch || user?.branch || ""
+                : branch;
+            const effectiveDepartment = isQLRRManager
+                ? targetDepartment
+                : department;
             const res = await api.get("/exports/department-summary", {
                 responseType: "blob",
+                params: {
+                    ...(effectiveBranch ? { branch: effectiveBranch } : {}),
+                    ...(effectiveDepartment ? { department: effectiveDepartment } : {}),
+                },
             });
             const blob = new Blob([res.data], {
                 type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -127,8 +220,13 @@ export default function DashboardPage() {
                     .replace(/[\u0300-\u036f]/g, "")
                     .replace(/[^a-zA-Z0-9-_]+/g, "_") || "tong_hop";
             const stamp = new Date().toISOString().slice(0, 10);
-            const fileName = `Tong_ket_xep_loai_${sanitize(branch)}_${sanitize(
-                department
+            const branchLabel = getBranchLabel(effectiveBranch) || branch;
+            const departmentLabel = getDepartmentLabel(
+                effectiveBranch,
+                effectiveDepartment
+            ) || effectiveDepartment || department;
+            const fileName = `Tong_ket_xep_loai_${sanitize(branchLabel)}_${sanitize(
+                departmentLabel
             )}_${stamp}.xlsx`;
             saveAs(blob, fileName);
             message.success("Đã tải file tổng kết");
@@ -141,7 +239,14 @@ export default function DashboardPage() {
         } finally {
             setExporting(false);
         }
-    }, [branch, department]);
+    }, [
+        branch,
+        department,
+        isQLRRManager,
+        targetBranch,
+        targetDepartment,
+        user?.branch,
+    ]);
     const handleViewForm = useCallback((record) => {
         if (!record?.id) return;
         setSelectedId(record.id);
@@ -414,13 +519,58 @@ export default function DashboardPage() {
                                         icon={<DownloadOutlined />}
                                         onClick={handleExportSummary}
                                         loading={exporting}
-                                        disabled={loading || !submissions.length}
+                                        disabled={
+                                            loading ||
+                                            (!isQLRRManager && !submissions.length) ||
+                                            (isQLRRManager && !targetDepartment)
+                                        }
                                     >
                                         Xuất tổng kết xếp loại
                                     </Button>
                                 </Space>
                             }
                         >
+                            {isQLRRManager && (
+                                <Space
+                                    wrap
+                                    style={{ marginBottom: 16, width: "100%" }}
+                                >
+                                    <Select
+                                        style={{ minWidth: 220 }}
+                                        placeholder="Chọn chi nhánh"
+                                        value={targetBranch || undefined}
+                                        onChange={(value) => {
+                                            setTargetBranch(value);
+                                            setTargetDepartment("");
+                                        }}
+                                    >
+                                        {branchOptions.map((option) => (
+                                            <Select.Option
+                                                key={option.value}
+                                                value={option.value}
+                                            >
+                                                {option.label}
+                                            </Select.Option>
+                                        ))}
+                                    </Select>
+                                    <Select
+                                        allowClear
+                                        style={{ minWidth: 260 }}
+                                        placeholder="Chọn phòng ban cần xuất"
+                                        value={targetDepartment || undefined}
+                                        onChange={(value) => setTargetDepartment(value || "")}
+                                    >
+                                        {selectableDepartments.map((option) => (
+                                            <Select.Option
+                                                key={option.value}
+                                                value={option.value}
+                                            >
+                                                {option.label}
+                                            </Select.Option>
+                                        ))}
+                                    </Select>
+                                </Space>
+                            )}
                             {tableContent}
                         </Card>
                     </Space>

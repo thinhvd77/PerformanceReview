@@ -203,7 +203,7 @@ export const login = async (req, res) => {
         res.json({
             message: 'Login successful',
             token,
-            user: { username: user.username, fullname: user.fullname, role: user.role },
+            user: { username: user.username, fullname: user.fullname, role: user.role, department: user.department, branch: user.branch },
         });
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });

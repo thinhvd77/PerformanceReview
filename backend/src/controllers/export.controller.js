@@ -126,7 +126,8 @@ const mapDepartmentName = (branchId, departmentId) => {
     return departmentId || '';
 };
 
-const getManagerContext = async (req) => {
+const getManagerContext = async (req, options = {}) => {
+    const { allowDepartmentOverride = false } = options || {};
     const username = req.user?.username;
     if (!username) {
         const err = new Error('Unauthorized');
@@ -157,7 +158,41 @@ const getManagerContext = async (req) => {
         throw err;
     }
 
-    return { manager, branch, department };
+    let effectiveBranch = branch;
+    let effectiveDepartment = department;
+
+    const normalizedDepartment = (department || '').toLowerCase();
+
+    if (allowDepartmentOverride && normalizedDepartment === 'qlrr') {
+        const rawBranch = (req.query?.targetBranch ?? req.query?.branch ?? '').toString().trim();
+        const rawDepartment = (req.query?.targetDepartment ?? req.query?.department ?? '').toString().trim();
+
+        if (rawBranch) {
+            if (!orgData.departments?.[rawBranch]) {
+                const err = new Error('Chi nhánh không hợp lệ');
+                err.status = 400;
+                throw err;
+            }
+            effectiveBranch = rawBranch;
+        }
+
+        if (rawDepartment) {
+            const departmentsOfBranch = orgData.departments?.[effectiveBranch] || [];
+            const isValidDepartment = departmentsOfBranch.some((item) => item.id === rawDepartment);
+            if (!isValidDepartment) {
+                const err = new Error('Phòng ban không hợp lệ');
+                err.status = 400;
+                throw err;
+            }
+            effectiveDepartment = rawDepartment;
+        } else if (rawBranch && rawBranch !== branch) {
+            const err = new Error('Vui lòng chọn phòng ban muốn xuất');
+            err.status = 400;
+            throw err;
+        }
+    }
+
+    return { manager, branch: effectiveBranch, department: effectiveDepartment };
 };
 
 const getLatestRecordsForDepartment = async (branch, department) => {
@@ -513,7 +548,7 @@ export const listDepartmentSubmissions = async (req, res) => {
 
 export const exportDepartmentSummary = async (req, res) => {
     try {
-        const { branch, department } = await getManagerContext(req);
+        const { branch, department } = await getManagerContext(req, { allowDepartmentOverride: true });
         const records = await getLatestRecordsForDepartment(branch, department);
 
         if (!records.length) {
