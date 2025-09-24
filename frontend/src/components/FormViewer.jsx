@@ -16,6 +16,85 @@ import { saveAs } from "file-saver";
 
 const { Title } = Typography;
 
+const normalizeText = (value) =>
+    String(value || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .trim();
+
+const parseNumberAnyLocale = (value) => {
+    if (value === null || value === undefined || value === "") return null;
+    if (typeof value === "number") return Number.isFinite(value) ? value : null;
+    let s = String(value).trim();
+    if (!s) return null;
+    const hasPercent = s.includes("%");
+    s = s.replace(/%/g, "");
+    if (s.includes(",") && !s.includes(".")) {
+        s = s.replace(/\./g, "").replace(",", ".");
+    } else {
+        s = s.replace(/,/g, "");
+    }
+    const n = Number(s);
+    if (!Number.isFinite(n)) return null;
+    return hasPercent ? n / 100 : n;
+};
+
+const formatPercentVi = (ratio) => {
+    if (ratio === null || ratio === undefined || !Number.isFinite(ratio)) return "";
+    const nf = new Intl.NumberFormat("vi-VN", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+    });
+    return `${nf.format(ratio * 100)}%`;
+};
+
+const AUTO_GROWTH_RULES = [
+    {
+        growthLabel: "Tăng trưởng nguồn vốn",
+        bonusLabel: "Chỉ tiêu nguồn vốn vượt KH Quý được giao",
+        key: "capital-growth-bonus",
+        step: 0.05,
+    },
+    {
+        growthLabel: "Tăng trưởng dư nợ",
+        bonusLabel: "Chỉ tiêu dư nợ vượt KH Quý được giao",
+        key: "loan-growth-bonus",
+        step: 0.05,
+    },
+    {
+        growthLabel: "Thu dịch vụ",
+        bonusLabel: "Chỉ tiêu thu dịch vụ vượt KH Quý được giao",
+        key: "service-growth-bonus",
+        step: 0.03,
+    },
+];
+const AUTO_GROWTH_RULE_KEY_SET = new Set(
+    AUTO_GROWTH_RULES.map((rule) => rule.key)
+);
+
+const mergeAddresses = (list = [], extras = []) => {
+    const result = [];
+    const seen = new Set();
+    const base = Array.isArray(list) ? list : [];
+    base.forEach((addr) => {
+        const trimmed = String(addr || "").trim();
+        if (trimmed && !seen.has(trimmed)) {
+            seen.add(trimmed);
+            result.push(trimmed);
+        }
+    });
+    const extraList = Array.isArray(extras) ? extras : [extras];
+    extraList.forEach((addr) => {
+        const trimmed = String(addr || "").trim();
+        if (trimmed && !seen.has(trimmed)) {
+            seen.add(trimmed);
+            result.push(trimmed);
+        }
+    });
+    return result;
+};
+
 // Tuỳ bạn thay bằng dữ liệu backend sau này:
 const SECTION_OPTIONS = {
     II: [
@@ -189,6 +268,30 @@ export default function FormViewer({ formId }) {
                 .includes(SCORE_LABEL)
         );
         return i >= 0 ? i : 6; // fallback: col_7 (index 6)
+    }, [template]);
+
+    const planColIdx = useMemo(() => {
+        const cols = template?.schema?.table?.columns || [];
+        const idx = cols.findIndex((c) =>
+            normalizeText(c?.label).includes("ke hoach")
+        );
+        return idx >= 0 ? idx : null;
+    }, [template]);
+
+    const actualColIdx = useMemo(() => {
+        const cols = template?.schema?.table?.columns || [];
+        const idx = cols.findIndex((c) =>
+            normalizeText(c?.label).includes("thuc hien")
+        );
+        return idx >= 0 ? idx : null;
+    }, [template]);
+
+    const noteColIdx = useMemo(() => {
+        const cols = template?.schema?.table?.columns || [];
+        const idx = cols.findIndex((c) =>
+            normalizeText(c?.label).includes("ghi chu")
+        );
+        return idx >= 0 ? idx : null;
     }, [template]);
 
     // A = I + II + III - IV + V (ở cột "Điểm theo mức độ hoàn thành")
@@ -383,6 +486,294 @@ export default function FormViewer({ formId }) {
             return rest;
         });
     };
+
+    const resolveCellNumericValue = (cell) => {
+        if (!cell) return null;
+        let raw = null;
+        if (cell.addr) {
+            if (cell.formula) {
+                if (
+                    computedByAddr &&
+                    Object.prototype.hasOwnProperty.call(computedByAddr, cell.addr)
+                ) {
+                    raw = computedByAddr[cell.addr];
+                } else {
+                    raw = cell.value;
+                }
+            } else if (cell.input) {
+                raw = cellInputs?.[cell.addr];
+                if (raw === undefined || raw === null || raw === "") raw = cell.value;
+            } else {
+                raw = cellInputs?.[cell.addr];
+                if (raw === undefined || raw === null || raw === "") raw = cell.value;
+            }
+        } else {
+            raw = cell.value;
+        }
+        return parseNumberAnyLocale(raw);
+    };
+
+    useEffect(() => {
+        if (
+            !table?.rows ||
+            scoreColIdx == null ||
+            planColIdx == null ||
+            actualColIdx == null
+        )
+            return;
+
+        const rows = table.rows;
+        const findParentIndex = (rowsList) =>
+            rowsList.findIndex(
+                (row) => normalizeText(row?.cells?.[0]?.value) === "iii"
+            );
+
+        const parentRowIdx = findParentIndex(rows);
+        if (parentRowIdx === -1) return;
+
+        const autoRowsByKey = new Map();
+        const autoAddrsSet = new Set();
+        rows.forEach((row, idx) => {
+            const key = row?.autoGeneratedKey;
+            if (key && AUTO_GROWTH_RULE_KEY_SET.has(key)) {
+                autoRowsByKey.set(key, { row, idx });
+                const addr = row?.cells?.[scoreColIdx]?.addr;
+                if (addr) autoAddrsSet.add(addr);
+            }
+        });
+
+        const currentManualAddrs = childrenScoreAddrs[parentRowIdx] || [];
+        const manualAddrs = currentManualAddrs.filter(
+            (addr) => addr && !autoAddrsSet.has(addr)
+        );
+        if (manualAddrs.length !== currentManualAddrs.length) {
+            setChildrenScoreAddrs((prev) => ({
+                ...prev,
+                [parentRowIdx]: manualAddrs,
+            }));
+            return;
+        }
+
+        const otherAutoAddrsFor = (excludeKey) =>
+            Array.from(autoRowsByKey.entries())
+                .filter(([key]) => key !== excludeKey)
+                .map(([, info]) => info.row?.cells?.[scoreColIdx]?.addr)
+                .filter(Boolean);
+
+        const parentFormulaFor = (autoAddrs) => {
+            const allAddrs = mergeAddresses(manualAddrs, autoAddrs);
+            return allAddrs.length ? `=SUM(${allAddrs.join(',')})` : "=0";
+        };
+
+        const findInsertIndex = (rowsList, parentIdx) => {
+            let insertIdx = parentIdx + 1;
+            while (insertIdx < rowsList.length) {
+                const roman = String(rowsList[insertIdx]?.cells?.[0]?.value || "").trim();
+                if (/^(II|III|IV|V)$/i.test(roman)) break;
+                insertIdx += 1;
+            }
+            return insertIdx;
+        };
+
+        const processRule = (rule) => {
+            const { growthLabel, bonusLabel, key } = rule;
+            const autoInfo = autoRowsByKey.get(key) || null;
+            const autoRowIdx = autoInfo?.idx ?? -1;
+            const autoAddr = autoInfo?.row?.cells?.[scoreColIdx]?.addr || null;
+            const otherAutoAddrs = otherAutoAddrsFor(key);
+
+            const growthRowIdx = rows.findIndex(
+                (row) =>
+                    normalizeText(row?.cells?.[1]?.value) ===
+                    normalizeText(growthLabel)
+            );
+
+            const planCell =
+                growthRowIdx !== -1 ? rows[growthRowIdx]?.cells?.[planColIdx] : null;
+            const actualCell =
+                growthRowIdx !== -1 ? rows[growthRowIdx]?.cells?.[actualColIdx] : null;
+
+            const planValue = resolveCellNumericValue(planCell);
+            const actualValue = resolveCellNumericValue(actualCell);
+            const valid =
+                planValue !== null &&
+                actualValue !== null &&
+                Number.isFinite(planValue) &&
+                planValue !== 0 &&
+                Number.isFinite(actualValue);
+
+            const positiveRatio = valid
+                ? Math.max(0, (actualValue - planValue) / Math.abs(planValue))
+                : 0;
+
+            const step = typeof rule.step === 'number' && rule.step > 0 ? rule.step : 0.05;
+            const rawPoints =
+                positiveRatio > 0 ? Math.floor((positiveRatio + 1e-9) / step) : 0;
+            const bonusPoints = Math.min(5, rawPoints);
+            const noteText = positiveRatio > 0 ? `Vượt ${formatPercentVi(positiveRatio)}` : "";
+
+            const removeAutoRow = () => {
+                if (!autoInfo) return false;
+                const desiredFormula = parentFormulaFor(otherAutoAddrs);
+                setTable((prev) => {
+                    if (!prev?.rows) return prev;
+                    const nextRows = prev.rows.filter(
+                        (row) => row?.autoGeneratedKey !== key
+                    );
+                    const parentIdxNext = findParentIndex(nextRows);
+                    if (parentIdxNext !== -1) {
+                        const parentRow = nextRows[parentIdxNext];
+                        if (parentRow?.cells) {
+                            const parentCells = parentRow.cells.map((cell, idx) =>
+                                idx === scoreColIdx
+                                    ? { ...cell, formula: desiredFormula }
+                                    : cell
+                            );
+                            nextRows[parentIdxNext] = { ...parentRow, cells: parentCells };
+                        }
+                    }
+                    return { ...prev, rows: nextRows };
+                });
+                if (autoAddr) {
+                    setCellInputs((prev) => {
+                        if (!prev || !(autoAddr in prev)) return prev;
+                        const { [autoAddr]: _omit, ...rest } = prev;
+                        return rest;
+                    });
+                }
+                return true;
+            };
+
+            if (bonusPoints <= 0) {
+                return removeAutoRow();
+            }
+
+            if (!autoInfo) {
+                if (!valid) return false;
+                const scoreColLetter = numToCol(scoreColIdx + 1);
+                const newAddr = `${scoreColLetter}${virtualRowNo}`;
+                const desiredFormula = parentFormulaFor(
+                    mergeAddresses(otherAutoAddrs, newAddr)
+                );
+                setTable((prev) => {
+                    if (!prev?.rows) return prev;
+                    const nextRows = [...prev.rows];
+                    const parentIdxNext = findParentIndex(nextRows);
+                    if (parentIdxNext === -1) return prev;
+                    const columnCount =
+                        nextRows[parentIdxNext]?.cells?.length ||
+                        prev.columns?.length ||
+                        table?.columns?.length ||
+                        0;
+                    if (!columnCount) return prev;
+                    const insertIdx = findInsertIndex(nextRows, parentIdxNext);
+                    const newCells = Array.from({ length: columnCount }, (_, cIdx) => ({
+                        addr: null,
+                        value: "",
+                        rowSpan: 1,
+                        colSpan: 1,
+                        hidden: false,
+                        input: false,
+                    }));
+                    if (newCells[1]) newCells[1] = { ...newCells[1], value: bonusLabel };
+                    if (noteColIdx != null && newCells[noteColIdx]) {
+                        newCells[noteColIdx] = { ...newCells[noteColIdx], value: noteText };
+                    }
+                    newCells[scoreColIdx] = {
+                        ...newCells[scoreColIdx],
+                        addr: newAddr,
+                        value: bonusPoints,
+                        input: false,
+                    };
+                    nextRows.splice(insertIdx, 0, {
+                        autoGenerated: true,
+                        autoGeneratedKey: key,
+                        cells: newCells,
+                    });
+                    const parentRow = nextRows[parentIdxNext];
+                    if (parentRow?.cells) {
+                        const parentCells = parentRow.cells.map((cell, idx) =>
+                            idx === scoreColIdx
+                                ? { ...cell, formula: desiredFormula }
+                                : cell
+                        );
+                        nextRows[parentIdxNext] = { ...parentRow, cells: parentCells };
+                    }
+                    return { ...prev, rows: nextRows };
+                });
+                setVirtualRowNo((n) => n + 1);
+                return true;
+            }
+
+            if (!valid) {
+                return removeAutoRow();
+            }
+
+            const combinedAutoAddrs = mergeAddresses(
+                otherAutoAddrs,
+                autoAddr ? [autoAddr] : []
+            );
+            const desiredFormula = parentFormulaFor(combinedAutoAddrs);
+            const currentFormula =
+                rows[parentRowIdx]?.cells?.[scoreColIdx]?.formula || "";
+            const currentScore = autoInfo.row?.cells?.[scoreColIdx]?.value;
+            const currentNote =
+                noteColIdx != null
+                    ? autoInfo.row?.cells?.[noteColIdx]?.value || ""
+                    : "";
+            const needRowUpdate =
+                String(currentScore ?? "") !== String(bonusPoints) ||
+                currentNote !== noteText;
+            const needParentUpdate = currentFormula !== desiredFormula;
+
+            if (!needRowUpdate && !needParentUpdate) return false;
+
+            setTable((prev) => {
+                if (!prev?.rows) return prev;
+                const nextRows = prev.rows.map((row, idx) => {
+                    if (idx === autoRowIdx && row?.cells) {
+                        const cells = row.cells.map((cell, cIdx) => {
+                            if (cIdx === scoreColIdx) {
+                                return { ...cell, value: bonusPoints };
+                            }
+                            if (noteColIdx != null && cIdx === noteColIdx) {
+                                return { ...cell, value: noteText };
+                            }
+                            return cell;
+                        });
+                        return { ...row, cells };
+                    }
+                    if (normalizeText(row?.cells?.[0]?.value) === "iii" && row?.cells) {
+                        const cells = row.cells.map((cell, cIdx) => {
+                            if (cIdx === scoreColIdx) {
+                                return { ...cell, formula: desiredFormula };
+                            }
+                            return cell;
+                        });
+                        return { ...row, cells };
+                    }
+                    return row;
+                });
+                return { ...prev, rows: nextRows };
+            });
+            return true;
+        };
+
+        for (const rule of AUTO_GROWTH_RULES) {
+            if (processRule(rule)) return;
+        }
+    }, [
+        table,
+        scoreColIdx,
+        planColIdx,
+        actualColIdx,
+        noteColIdx,
+        childrenScoreAddrs,
+        cellInputs,
+        computedByAddr,
+    ,
+        virtualRowNo
+    ]);
 
     const handleExport = async () => {
         try {
