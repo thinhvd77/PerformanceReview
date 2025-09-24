@@ -1,5 +1,5 @@
 // FormViewer.jsx
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import api from "../services/api.js";
 import { Button, Spin, Alert, Typography, Empty, message } from "antd";
@@ -15,6 +15,8 @@ import { orgData, findNameById } from "../data/orgData.js";
 import { saveAs } from "file-saver";
 
 const { Title } = Typography;
+
+const cloneTable = (source) => (source ? JSON.parse(JSON.stringify(source)) : source);
 
 const normalizeText = (value) =>
     String(value || "")
@@ -220,23 +222,27 @@ export default function FormViewer({ formId }) {
 
     // Bảng "sống" để chèn/xoá hàng runtime không làm vỡ addr của bảng gốc
     const baseTable = useMemo(() => template?.schema?.table, [template]);
-    const [table, setTable] = useState(baseTable);
-    useEffect(() => setTable(baseTable), [baseTable]);
+    const [table, setTable] = useState(() => cloneTable(baseTable));
+    useEffect(() => setTable(cloneTable(baseTable)), [baseTable]);
 
-    // Khởi tạo giá trị mặc định cho các dòng II/III/IV/V = option đầu tiên
-    // LƯU Ý: key theo ký hiệu La Mã (II/III/IV/V) để không bị lệch khi chèn/xoá hàng
-    useEffect(() => {
-        if (!baseTable?.rows) return;
+    const computeDefaultCriteria = useCallback(() => {
+        if (!baseTable?.rows) return {};
         const next = {};
         baseTable.rows.forEach((row) => {
             const roman = String(row?.cells?.[0]?.value || "").trim();
             if (/^(II|III|IV|V)$/.test(roman)) {
                 const opts = SECTION_OPTIONS[roman] || [];
-                if (opts[0]) next[roman] = opts[0].value; // value của option đầu
+                if (opts[0]) next[roman] = opts[0].value;
             }
         });
-        setCriteriaSelectValueByRow(next);
+        return next;
     }, [baseTable]);
+
+    // Khởi tạo giá trị mặc định cho các dòng II/III/IV/V = option đầu tiên
+    // LƯU Ý: key theo ký hiệu La Mã (II/III/IV/V) để không bị lệch khi chèn/xoá hàng
+    useEffect(() => {
+        setCriteriaSelectValueByRow(computeDefaultCriteria());
+    }, [computeDefaultCriteria]);
 
     // State cho cell input (theo địa chỉ Excel)
     const [cellInputs, setCellInputs] = useState({});
@@ -850,6 +856,16 @@ export default function FormViewer({ formId }) {
                 type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             });
             saveAs(blob, fileName);
+
+            const restoredTable = cloneTable(baseTable);
+            const initialInputs = restoredTable ? buildInitialInputs(restoredTable) : {};
+            const defaultCriteria = computeDefaultCriteria();
+
+            setChildrenScoreAddrs({});
+            setVirtualRowNo(1000);
+            setCriteriaSelectValueByRow(defaultCriteria);
+            setCellInputs(initialInputs);
+            setTable(restoredTable ?? null);
         } catch (e) {
             console.error(e);
             message.error(e?.message || "Xuất Excel thất bại");

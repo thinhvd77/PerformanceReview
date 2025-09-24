@@ -211,6 +211,7 @@ export default async function exportFormExcel({
 
     // ===== BẢNG =====
     let startRow = 11;
+    const tableHeaderRow = startRow;
 
     // Header cột
     for (let c = 1; c <= colCount; c++) {
@@ -337,10 +338,12 @@ export default async function exportFormExcel({
     }
 
     const tableEndRow = excelRow - 1;
+    let rankRowNumber = null;
 
     // === HÀNG XẾP LOẠI (tự chèn & merge) ===
     if (injectRankRow) {
         const r = excelRow;
+        rankRowNumber = r;
 
         // cột STT (A) = 'VII'
         const romanCell = ws.getCell(r, 1);
@@ -404,6 +407,19 @@ export default async function exportFormExcel({
     empCell.font = { name: 'Times New Roman', size: 11, bold: true };
     empCell.alignment = { horizontal: 'center' };
 
+    const lockStartRow = tableHeaderRow;
+    let lockEndRow = tableEndRow;
+    if (injectRankRow && rankRowNumber) {
+        lockEndRow = Math.max(lockEndRow, rankRowNumber);
+    }
+
+    ws.eachRow({ includeEmpty: true }, (row, rowNumber) => {
+        if (rowNumber >= lockStartRow && rowNumber <= lockEndRow) return;
+        row.eachCell({ includeEmpty: true }, (cell) => {
+            cell.protection = { locked: false, hidden: false };
+        });
+    });
+
     // Protect sheet (tùy chọn)
     if (protectSheet) {
         const baseOpts = {
@@ -420,13 +436,13 @@ export default async function exportFormExcel({
         const resizeOpts = readOnly && allowResizeForPrint
             ? {
                 selectLockedCells: true,
-                selectUnlockedCells: false,
+                selectUnlockedCells: true,
                 formatColumns: true,
                 formatRows: true,
             }
             : {
                 selectLockedCells: false,
-                selectUnlockedCells: false,
+                selectUnlockedCells: true,
                 formatColumns: false,
                 formatRows: false,
             };

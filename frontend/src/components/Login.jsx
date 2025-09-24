@@ -59,7 +59,7 @@ const Login = () => {
             // Quay lại trang gốc nếu có, nếu không: điều hướng theo role
             const from = location.state?.from?.pathname;
             const role = (loggedInUser.role || '').toString().toLowerCase();
-            const fallback = role === 'admin' ? '/admin' : role === 'manager' ? '/dashboard' : '/';
+            const fallback = role === 'admin' ? '/admin' : role === 'manager' ? '/' : '/';
             navigate(from || fallback, { replace: true });
         } catch (err) {
             console.error('Login error:', err);

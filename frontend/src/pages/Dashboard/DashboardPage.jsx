@@ -584,7 +584,7 @@ export default function DashboardPage() {
                 onCancel={handleModalClose}
                 footer={null}
                 width={1000}
-                destroyOnClose
+                destroyOnHidden
                 centered
             >
                 {parsing && (
