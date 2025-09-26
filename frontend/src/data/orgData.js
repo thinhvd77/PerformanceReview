@@ -7,6 +7,7 @@ export const orgData = {
     ],
     departments: {
         'hs': [
+            { id: 'hs-gd', name: 'Ban giám đốc' },
             { id: 'hs-kt', name: 'Kế toán & ngân quỹ' },
             { id: 'hs-pgd', name: 'Phòng giao dịch Bình Tây' },
             { id: 'hs-cn', name: 'Phòng Khách hàng cá nhân' },
@@ -14,20 +15,24 @@ export const orgData = {
             { id: 'hs-th', name: 'Phòng Tổng hợp' },
             { id: 'hs-ktgs', name: 'Phòng Kiểm tra giám sát nội bộ' },
             { id: 'hs-qlrr', name: 'Phòng Kế hoạch & quản lý rủi ro' },
-            { id: 'hs-gd', name: 'Ban giám đốc' }
         ],
         'cn6': [
+            { id: 'cn6-gd', name: 'Ban giám đốc' },
             { id: 'cn6-kt', name: 'Kế toán & ngân quỹ' },
             { id: 'cn6-kh', name: 'Phòng Khách hàng' },
-            { id: 'cn6-gd', name: 'Ban giám đốc' }
         ],
         'nh': [
+            { id: 'nh-gd', name: 'Ban giám đốc' },
             { id: 'nh-kt', name: 'Kế toán & ngân quỹ' },
             { id: 'nh-kh', name: 'Phòng Khách hàng' },
-            { id: 'nh-gd', name: 'Ban giám đốc' }
         ],
     },
     positions: {
+        'hs-gd': [
+            { id: 'hs-gd-gd', name: 'Giám đốc chi nhánh' },
+            { id: 'hs-gd-pgd-kt', name: 'Phó Giám đốc chi nhánh - Kế toán' },
+            { id: 'hs-gd-pgd-td', name: 'Phó Giám đốc chi nhánh - Tín dụng' },
+        ],
         'hs-kt': [
             { id: 'hs-kt-tp', name: 'Trưởng phòng' },
             { id: 'hs-kt-pp', name: 'Phó Trưởng phòng' },
@@ -67,10 +72,6 @@ export const orgData = {
         'hs-qlrr': [
             { id: 'hs-qlrr-tp', name: 'Trưởng phòng' },
             { id: 'hs-qlrr-nv', name: 'Nhân viên' }
-        ],
-        'hs-gd': [
-            { id: 'hs-gd-gd', name: 'Giám đốc chi nhánh' },
-            { id: 'hs-gd-pgd', name: 'Phó Giám đốc chi nhánh' }
         ],
         // Chi nhánh 6
         'cn6-kt': [

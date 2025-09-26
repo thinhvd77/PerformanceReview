@@ -43,7 +43,25 @@ export default function SchemaTable({
         return rest;
     });
 
-    const isRoman = (s) => /^(II|III|IV|V)$/.test(String(s || '').trim());
+    const getOptionsForRow = (romanKey, criteriaText) => {
+        const romanTrim = String(romanKey || '').trim();
+        const criteriaTrim = String(criteriaText || '').trim();
+
+        if (romanTrim && Array.isArray(sectionOptions[romanTrim]) && sectionOptions[romanTrim].length) {
+            return sectionOptions[romanTrim];
+        }
+        if (criteriaTrim && Array.isArray(sectionOptions[criteriaTrim]) && sectionOptions[criteriaTrim].length) {
+            return sectionOptions[criteriaTrim];
+        }
+        const normalized = norm(criteriaTrim);
+        if (normalized && Array.isArray(sectionOptions[normalized]) && sectionOptions[normalized].length) {
+            return sectionOptions[normalized];
+        }
+        const match = Object.entries(sectionOptions).find(([k, opts]) =>
+            opts?.length && norm(k) === normalized
+        );
+        return match ? match[1] : [];
+    };
 
     // Normalize Vietnamese text (remove diacritics, lowercase)
     const norm = (s) => String(s || '')
@@ -204,7 +222,12 @@ export default function SchemaTable({
                     <tbody>
                     {table.rows.map((row, rIdx) => {
                         const roman = row?.cells?.[0]?.value; // cột STT (A)
-                        const isRomanRow = isRoman(roman);
+                        const criteriaText = row?.cells?.[1]?.value;
+                        const options = getOptionsForRow(roman, criteriaText);
+                        const isSectionRow = options.length > 0;
+                        const romanKey = String(roman || '').trim();
+                        const criteriaLabel = String(criteriaText || '').trim();
+                        const rowKey = romanKey || criteriaLabel || `row-${rIdx}`;
                         // Dòng con: có ô điểm (cột score) là input và addr thuộc map childAddrToParentRow
                         const scoreCell = (row?.cells || [])[scoreColIdx];
                         const childScoreAddr = (scoreCell && scoreCell.input && scoreCell.addr) ? scoreCell.addr : null;
@@ -239,13 +262,10 @@ export default function SchemaTable({
                                     })();
 
                                     const isCriteriaColumn = cIdx === 1; // cột "Tiêu chí" là cột thứ 2 (B)
-                                    const options = (sectionOptions[String(roman)?.trim()] || []);
-
-                                    // Nếu là dòng II/III/IV/V và đang ở cột "Tiêu chí" => Select (trừ khi readOnly)
-                                    if (!readOnly && isRomanRow && isCriteriaColumn) {
+                                    // Nếu dòng có tuỳ chọn và đang ở cột "Tiêu chí" => Select (trừ khi readOnly)
+                                    if (!readOnly && isSectionRow && isCriteriaColumn) {
                                         const fallbackValue = options?.[0]?.value;
-                                        const romanKey = String(roman).trim();
-                                        const currentValue = selectValueByRow[romanKey] ?? fallbackValue;
+                                        const currentValue = selectValueByRow[rowKey] ?? fallbackValue;
                                         return (
                                             <td key={`c-${rIdx}-${cIdx}`} {...props}
                                                 style={{ border: borderStyle, padding: '6px 8px', verticalAlign: 'top', textAlign: 'left' }}>
@@ -256,7 +276,7 @@ export default function SchemaTable({
                                                     options={options}
                                                     onSelect={(value, option) => {
                                                         const label = option?.label ?? value;
-                                                        onSectionChoose && onSectionChoose(rIdx, romanKey, String(label));
+                                                        onSectionChoose && onSectionChoose(rIdx, rowKey, String(label));
                                                     }}
                                                     value={currentValue}
                                                     filterOption={(input, opt) => (opt?.label ?? '').toLowerCase().includes(input.toLowerCase())}

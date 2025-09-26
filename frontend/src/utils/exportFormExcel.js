@@ -111,6 +111,7 @@ export default async function exportFormExcel({
     employee_name = '',
     role = '',
     branch = '',
+    department = '',
     protectSheet = false,
     protectPassword = '',
     allowSelectUnlocked = true,
@@ -125,6 +126,17 @@ export default async function exportFormExcel({
 
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet('Phiếu');
+
+    const deptMap = {
+        kt: 'PHÒNG KT&NQ',
+        pgd: 'PHÒNG GIAO DỊCH BÌNH TÂY',
+        cn: 'PHÒNG KHCN',
+        dn: 'PHÒNG KHDN',
+        kh: 'PHÒNG KHÁCH HÀNG',
+        th: 'PHÒNG TỔNG HỢP',
+        ktgs: 'PHÒNG KTGSNB',
+        qlrr: 'PHÒNG KH&QLRR',
+    };
 
     // Trang in
     ws.pageSetup = {
@@ -152,31 +164,71 @@ export default async function exportFormExcel({
     }
     ws.columns = colWidths;
 
-    // ===== HEADER =====
-    safeMergeCells(ws, 'A2:C2');
-    ws.getCell('A2').value = 'NGÂN HÀNG NÔNG NGHIỆP';
-    ws.getCell('A2').font = { name: 'Times New Roman', size: 11 };
-    ws.getCell('A2').alignment = { horizontal: 'center' };
+    if (branch === 'hs' && role === 'Giám đốc chi nhánh') {
+        // ===== HEADER =====
+        safeMergeCells(ws, 'A2:B2');
+        ws.getCell('A2').value = 'NGÂN HÀNG NÔNG NGHIỆP';
+        ws.getCell('A2').font = { name: 'Times New Roman', size: 11 };
+        ws.getCell('A2').alignment = { horizontal: 'center' };
 
-    safeMergeCells(ws, 'A3:C3');
-    ws.getCell('A3').value = 'VÀ PHÁT TRIỂN NÔNG THÔN VIỆT NAM';
-    ws.getCell('A3').font = { name: 'Times New Roman', size: 11 };
-    ws.getCell('A3').alignment = { horizontal: 'center' };
+        safeMergeCells(ws, 'A3:B3');
+        ws.getCell('A3').value = 'VÀ PHÁT TRIỂN NÔNG THÔN VIỆT NAM';
+        ws.getCell('A3').font = { name: 'Times New Roman', size: 11 };
+        ws.getCell('A3').alignment = { horizontal: 'center' };
 
-    safeMergeCells(ws, 'A4:C4');
-    ws.getCell('A4').value = 'CHI NHÁNH BẮC TPHCM';
-    ws.getCell('A4').font = { name: 'Times New Roman', size: 11, bold: true, underline: true };
-    ws.getCell('A4').alignment = { horizontal: 'center' };
+        safeMergeCells(ws, 'A4:B4');
+        ws.getCell('A4').value = 'CHI NHÁNH BẮC TPHCM';
+        ws.getCell('A4').font = { name: 'Times New Roman', size: 11, bold: true, underline: true };
+        ws.getCell('A4').alignment = { horizontal: 'center' };
 
-    safeMergeCells(ws, 'F2:H2');
-    ws.getCell('F2').value = 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM';
-    ws.getCell('F2').alignment = { horizontal: 'center' };
-    ws.getCell('F2').font = { name: 'Times New Roman', bold: true, size: 11 };
+        safeMergeCells(ws, 'D2:G2');
+        ws.getCell('D2').value = 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM';
+        ws.getCell('D2').alignment = { horizontal: 'center' };
+        ws.getCell('D2').font = { name: 'Times New Roman', bold: true, size: 11 };
 
-    safeMergeCells(ws, 'F3:H3');
-    ws.getCell('F3').value = 'Độc lập - Tự do - Hạnh phúc';
-    ws.getCell('F3').alignment = { horizontal: 'center' };
-    ws.getCell('F3').font = { name: 'Times New Roman', size: 11, bold: true, underline: true };
+        safeMergeCells(ws, 'D3:G3');
+        ws.getCell('D3').value = 'Độc lập - Tự do - Hạnh phúc';
+        ws.getCell('D3').alignment = { horizontal: 'center' };
+        ws.getCell('D3').font = { name: 'Times New Roman', size: 11, bold: true, underline: true };
+    } else {
+        // ===== HEADER =====
+        safeMergeCells(ws, 'A2:C2');
+        ws.getCell('A2').value = 'NGÂN HÀNG NÔNG NGHIỆP';
+        ws.getCell('A2').font = { name: 'Times New Roman', size: 11 };
+        ws.getCell('A2').alignment = { horizontal: 'center' };
+
+        safeMergeCells(ws, 'A3:C3');
+        ws.getCell('A3').value = 'VÀ PHÁT TRIỂN NÔNG THÔN VIỆT NAM';
+        ws.getCell('A3').font = { name: 'Times New Roman', size: 11 };
+        ws.getCell('A3').alignment = { horizontal: 'center' };
+
+        safeMergeCells(ws, 'A4:C4');
+        ws.getCell('A4').value = 'CHI NHÁNH BẮC TPHCM';
+        ws.getCell('A4').font = { name: 'Times New Roman', size: 11, bold: true, underline: true };
+        ws.getCell('A4').alignment = { horizontal: 'center' };
+
+        safeMergeCells(ws, 'A5:C5');
+        if ((branch === 'cn6' || branch === 'nh') && (role === 'director' || role === 'deputy_director')) {
+            ws.getCell('A5').value = branch === 'cn6' ? 'CHI NHÁNH 6' : 'CHI NHÁNH NAM HOA';
+        } else if (department === 'pgd' && (role === 'director' || role === 'deputy_director')) {
+            ws.getCell('A5').value = 'PHÒNG GIAO DỊCH BÌNH TÂY';
+        } else {
+            const deptName = department ? (deptMap[department] || '') : '';
+            ws.getCell('A5').value = `${deptName}`;
+            ws.getCell('A5').font = { name: 'Times New Roman', size: 11, bold: true };
+            ws.getCell('A5').alignment = { horizontal: 'center' };
+        }
+
+        safeMergeCells(ws, 'F2:H2');
+        ws.getCell('F2').value = 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM';
+        ws.getCell('F2').alignment = { horizontal: 'center' };
+        ws.getCell('F2').font = { name: 'Times New Roman', bold: true, size: 11 };
+
+        safeMergeCells(ws, 'F3:H3');
+        ws.getCell('F3').value = 'Độc lập - Tự do - Hạnh phúc';
+        ws.getCell('F3').alignment = { horizontal: 'center' };
+        ws.getCell('F3').font = { name: 'Times New Roman', size: 11, bold: true, underline: true };
+    }
 
     ws.addRow([]);
 
@@ -389,7 +441,7 @@ export default async function exportFormExcel({
     dateCell.font = { name: 'Times New Roman', size: 11, italic: true };
     dateCell.alignment = { horizontal: 'right' };
 
-    if (branch === 'hs' && role === 'gd') {
+    if (branch === 'hs' && role === 'Giám đốc chi nhánh') {
         const khCell = ws.getCell(`B${dateRow + 1}`);
         khCell.value = 'Phòng KH&QLRR';
         khCell.font = { name: 'Times New Roman', size: 11, bold: true };
@@ -399,6 +451,16 @@ export default async function exportFormExcel({
         noteKH.value = '(Rà soát số liệu)';
         noteKH.font = { name: 'Times New Roman', size: 11, italic: true };
         noteKH.alignment = { horizontal: 'center' };
+    } else if ((branch === 'cn6' || branch === 'nh') && (role === 'deputy_director' || role === 'manager')) {
+        const cnCell = ws.getCell(`B${dateRow + 1}`);
+        cnCell.value = 'XÁC NHẬN CỦA ĐƠN VỊ';
+        cnCell.font = { name: 'Times New Roman', size: 11, bold: true };
+        cnCell.alignment = { horizontal: 'center' };
+    } else if ((department === 'pgd' && role === 'deputy_director') || role === 'deputy_manager' || role === 'employee') {
+        const pgdCell = ws.getCell(`B${dateRow + 1}`);
+        pgdCell.value = 'XÁC NHẬN CỦA PHÒNG';
+        pgdCell.font = { name: 'Times New Roman', size: 11, bold: true };
+        pgdCell.alignment = { horizontal: 'center' };
     }
 
     safeMergeCells(ws, `${toCol(dateLeftCol)}${dateRow + 1}:${toCol(colCount)}${dateRow + 1}`);

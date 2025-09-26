@@ -195,6 +195,95 @@ const SECTION_OPTIONS = {
             value: "V-5",
         }, // Nhất: 5 điểm; Nhì: 4 điểm; Ba: 3 điểm
     ],
+    D: [
+        {
+            label: "Điểm chấp hành nội quy lao động, văn hoá Agribank",
+            value: "D-1",
+        },
+        {
+            label: "Vi phạm chủ trương, chính sách của Đảng, pháp luật của nhà nước, chế độ của ngành nhưng chưa dẫn đến mức phải thi hành kỷ luật.",
+            value: "D-2",
+        },
+        {
+            label: "Đến cơ quan trong tình trạng say rượu, bia, các chất kích thích hoặc say rượu, bia bỏ vị trí làm việc",
+            value: "D-3",
+        },
+        {
+            label: "Đồng phục không đúng quy định",
+            value: "D-4",
+        },
+        {
+            label: "Chơi cờ, bài, chơi trò chơi điện tử, nói chuyện phiếm gây ồn ào  trong giờ làm việc",
+            value: "D-5",
+        },
+        {
+            label: "Có hành vi thiếu văn hoá tại nơi làm việc (nói tục, chửi bậy, xúc phạm danh dự người khác, quấy rối tình dục nơi làm việc...) hoặc gây rối làm mất trật tự cơ quan, gây mất đoàn kết nội bộ, không giữ gìn vệ sinh chung làm ảnh hưởng đến hoạt động kinh doanh của đơn vị",
+            value: "D-6",
+        },
+        {
+            label: "Có tác phong, thái độ làm việc không đúng đắn thiếu tinh thần trách nhiệm, bị khách hàng phản ánh làm ảnh hưởng đến uy tín của đơn vị nhưng chưa đến mức gây thiệt hại cho khách hàng và ngân hàng",
+            value: "D-7",
+        },
+        {
+            label: "Chấp hành không nghiêm chỉnh, triệt để những quy định về an toàn lao động và vệ sinh lao động nơi làm việc.",
+            value: "D-8",
+        },
+        {
+            label: "Ý thức trách nhiệm kém trong việc bảo quản, giữ gìn tài sản chung của cơ quan và tài sản được cơ quan giao cho cá nhân sử dụng, quản lý dẫn đến hư hỏng, mất mát. Sử dụng tài sản của cơ quan, đơn vị phục vụ cho lợi ích cá nhân mình và cá nhân người khác.",
+            value: "D-9",
+        },
+        {
+            label: "Vi phạm quy định về bảo vệ, giữ gìn bí mật về hoạt động kinh doanh của đơn vị như: trong phát ngôn, cung cấp số liệu tài liệu chưa được cho phép, bất cẩn để lộ thông tin… nhưng chưa gây ảnh hưởng đến hoạt động của đơn vị.",
+            value: "D-10",
+        },
+        {
+            label: "Thiếu tuân thủ các quy định về an toàn phòng chống cháy nổ, an toàn kho quỹ, quy trình vận hành máy móc, thiết bị kỹ thuật được trang bị dẫn đến gây hậu quả.",
+            value: "D-11",
+        },
+        {
+            label: "Thiếu tuân thủ các quy định về an toàn phòng chống cháy nổ, an toàn kho quỹ, quy trình vận hành máy móc, thiết bị kỹ thuật được trang bị dẫn đến gây hậu quả.",
+            value: "D-12",
+        },
+        {
+            label: "Cán bộ bị KH phản ánh qua đường dây nóng hoặc hòm thư góp ý mà phản ánh đó được xác định có lỗi của cán bộ",
+            value: "D-13",
+        },
+        {
+            label: "Vi phạm các chuẩn mực khác về Văn hóa Agribank.",
+            value: "D-14",
+        },
+        {
+            label: "Thực hiện giờ công lao động: Đi muộn, về sớm mà không có lý do chính đáng.",
+            value: "D-15",
+        },
+        {
+            label: "Nghỉ không phép",
+            value: "D-16",
+        },
+        {
+            label: "Các trường hợp khác quy định tại văn bản 429/NQLĐ-HĐTV-TCNS ngày 25/7/2022 về Nội quy lao động của Agribank hoặc các văn bản quy định khác theo từng thời kỳ (nếu có)",
+            value: "D-17",
+        },
+    ],
+};
+
+const D_SECTION_LABEL = "Điểm chấp hành nội quy lao động, văn hoá Agribank";
+SECTION_OPTIONS[D_SECTION_LABEL] = SECTION_OPTIONS.D;
+SECTION_OPTIONS[normalizeText(D_SECTION_LABEL)] = SECTION_OPTIONS.D;
+const D_SECTION_LABEL_ALT = "Điểm chấp hành nội quy lao động, văn hóa Agribank";
+SECTION_OPTIONS[D_SECTION_LABEL_ALT] = SECTION_OPTIONS.D;
+SECTION_OPTIONS[normalizeText(D_SECTION_LABEL_ALT)] = SECTION_OPTIONS.D;
+
+const resolveSectionOptions = (rawKey) => {
+    if (!rawKey) return [];
+    const trimmed = String(rawKey).trim();
+    if (SECTION_OPTIONS[trimmed]) return SECTION_OPTIONS[trimmed];
+    const normalized = normalizeText(trimmed);
+    if (SECTION_OPTIONS[normalized]) return SECTION_OPTIONS[normalized];
+    const match = Object.entries(SECTION_OPTIONS).find(
+        ([k]) => normalizeText(k) === normalized
+    );
+    return match ? match[1] : [];
 };
 
 export default function FormViewer({ formId }) {
@@ -228,18 +317,21 @@ export default function FormViewer({ formId }) {
     const computeDefaultCriteria = useCallback(() => {
         if (!baseTable?.rows) return {};
         const next = {};
-        baseTable.rows.forEach((row) => {
-            const roman = String(row?.cells?.[0]?.value || "").trim();
-            if (/^(II|III|IV|V)$/.test(roman)) {
-                const opts = SECTION_OPTIONS[roman] || [];
-                if (opts[0]) next[roman] = opts[0].value;
-            }
+        baseTable.rows.forEach((row, index) => {
+            const stt = String(row?.cells?.[0]?.value || "").trim();
+            const criteria = String(row?.cells?.[1]?.value || "").trim();
+            const rowKey = stt || criteria || `row-${index}`;
+
+            let options = resolveSectionOptions(stt);
+            if (!options.length) options = resolveSectionOptions(criteria);
+            if (!options.length) options = resolveSectionOptions(rowKey);
+
+            if (options[0]) next[rowKey] = options[0].value;
         });
         return next;
     }, [baseTable]);
 
-    // Khởi tạo giá trị mặc định cho các dòng II/III/IV/V = option đầu tiên
-    // LƯU Ý: key theo ký hiệu La Mã (II/III/IV/V) để không bị lệch khi chèn/xoá hàng
+    // Khởi tạo giá trị mặc định cho các dòng có tùy chọn
     useEffect(() => {
         setCriteriaSelectValueByRow(computeDefaultCriteria());
     }, [computeDefaultCriteria]);
@@ -387,7 +479,7 @@ export default function FormViewer({ formId }) {
     }, [childrenScoreAddrs]);
 
     // Khi người dùng chọn tiêu chí tại dòng II/III/IV/V
-    const handleSectionChoose = (rowIndex, roman, label) => {
+    const handleSectionChoose = (rowIndex, rowKey, label) => {
         const scoreColLetter = numToCol(scoreColIdx + 1); // ví dụ 7 -> 'G'
         const childScoreAddr = `${scoreColLetter}${virtualRowNo}`;
         const existingAddrs = childrenScoreAddrs[rowIndex] || [];
@@ -438,12 +530,13 @@ export default function FormViewer({ formId }) {
         setVirtualRowNo((n) => n + 1);
 
         // 5) Reset riêng ô Select của dòng này về option đầu tiên theo yêu cầu trước đó (key theo La Mã)
-        const first = (SECTION_OPTIONS[roman] || [])[0];
-        if (first)
+        const defaultOption = resolveSectionOptions(rowKey)[0];
+        if (defaultOption) {
             setCriteriaSelectValueByRow((m) => ({
                 ...m,
-                [roman]: first.value,
+                [rowKey]: defaultOption.value,
             }));
+        }
     };
 
     // Xoá dòng con đã tạo từ Select và cập nhật công thức của dòng cha
@@ -798,6 +891,9 @@ export default function FormViewer({ formId }) {
                 if (departmentId && positionId) {
                     const positions = orgData.positions?.[departmentId] || [];
                     role = findNameById(positions, positionId) || "";
+                    if (role.includes("-")) {
+                        role = role.split("-")[0].trim();
+                    }
                 }
             } catch {}
 
@@ -815,6 +911,7 @@ export default function FormViewer({ formId }) {
                 employee_name,
                 role,
                 branch: branchId,
+                department: departmentId.split("-")[1],
                 protectSheet: true,
                 protectPassword: "Admin@6421",
                 readOnly: true,
