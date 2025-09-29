@@ -269,14 +269,39 @@ const SECTION_OPTIONS = {
 
 const D_SECTION_LABEL = "Điểm chấp hành nội quy lao động, văn hoá Agribank";
 SECTION_OPTIONS[D_SECTION_LABEL] = SECTION_OPTIONS.D;
+SECTION_OPTIONS["Chỉ tiêu định tính"] = SECTION_OPTIONS.II;
+SECTION_OPTIONS[normalizeText("Chỉ tiêu định tính")] = SECTION_OPTIONS.II;
+SECTION_OPTIONS["Điểm cộng (tối đa 10 điểm)"] = SECTION_OPTIONS.III;
+SECTION_OPTIONS[normalizeText("Điểm cộng (tối đa 10 điểm)")] = SECTION_OPTIONS.III;
+SECTION_OPTIONS["Điểm trừ (tối đa 10 điểm)"] = SECTION_OPTIONS.IV;
+SECTION_OPTIONS[normalizeText("Điểm trừ (tối đa 10 điểm)")] = SECTION_OPTIONS.IV;
+SECTION_OPTIONS["Điểm thưởng (tối đa 05 điểm)"] = SECTION_OPTIONS.V;
+SECTION_OPTIONS[normalizeText("Điểm thưởng (tối đa 05 điểm)")] = SECTION_OPTIONS.V;
 SECTION_OPTIONS[normalizeText(D_SECTION_LABEL)] = SECTION_OPTIONS.D;
 const D_SECTION_LABEL_ALT = "Điểm chấp hành nội quy lao động, văn hóa Agribank";
 SECTION_OPTIONS[D_SECTION_LABEL_ALT] = SECTION_OPTIONS.D;
 SECTION_OPTIONS[normalizeText(D_SECTION_LABEL_ALT)] = SECTION_OPTIONS.D;
+const QUALITATIVE_LABEL = "Chỉ tiêu định tính";
+const QUALITATIVE_LABEL_NORMALIZED = normalizeText(QUALITATIVE_LABEL);
+const QUALITATIVE_BASE_SCORE = 20;
+const DISCIPLINE_BASE_SCORE = 10;
+const DISCIPLINE_LABEL_NORMALIZED = normalizeText(D_SECTION_LABEL);
+const DISCIPLINE_LABEL_ALT_NORMALIZED = normalizeText(D_SECTION_LABEL_ALT);
 
-const resolveSectionOptions = (rawKey) => {
-    if (!rawKey) return [];
-    const trimmed = String(rawKey).trim();
+const isQualitativeLabel = (value) =>
+    normalizeText(value) === QUALITATIVE_LABEL_NORMALIZED;
+
+const isDisciplineLabel = (value) => {
+    const normalized = normalizeText(value);
+    return (
+        normalized === DISCIPLINE_LABEL_NORMALIZED ||
+        normalized === DISCIPLINE_LABEL_ALT_NORMALIZED
+    );
+};
+
+const resolveSectionOptions = (labelKey) => {
+    const trimmed = String(labelKey || '').trim();
+    if (!trimmed) return [];
     if (SECTION_OPTIONS[trimmed]) return SECTION_OPTIONS[trimmed];
     const normalized = normalizeText(trimmed);
     if (SECTION_OPTIONS[normalized]) return SECTION_OPTIONS[normalized];
@@ -284,6 +309,34 @@ const resolveSectionOptions = (rawKey) => {
         ([k]) => normalizeText(k) === normalized
     );
     return match ? match[1] : [];
+};
+
+const applyBaseScoreDefaults = (tableData, scoreColIdx) => {
+    if (!tableData?.rows || scoreColIdx == null) return tableData;
+    let changed = false;
+    const nextRows = tableData.rows.map((row) => {
+        if (!row?.cells) return row;
+        const criteria = String(row.cells?.[1]?.value || '').trim();
+        const targetCell = row.cells?.[scoreColIdx];
+        if (!targetCell) return row;
+
+        let desiredFormula = null;
+        if (isQualitativeLabel(criteria)) {
+            desiredFormula = `=${QUALITATIVE_BASE_SCORE}`;
+        } else if (isDisciplineLabel(criteria)) {
+            desiredFormula = `=${DISCIPLINE_BASE_SCORE}`;
+        }
+
+        if (!desiredFormula || targetCell.formula === desiredFormula) return row;
+
+        changed = true;
+        const nextCells = row.cells.map((cell, idx) =>
+            idx === scoreColIdx ? { ...cell, formula: desiredFormula } : cell
+        );
+        return { ...row, cells: nextCells };
+    });
+
+    return changed ? { ...tableData, rows: nextRows } : tableData;
 };
 
 export default function FormViewer({ formId }) {
@@ -318,14 +371,9 @@ export default function FormViewer({ formId }) {
         if (!baseTable?.rows) return {};
         const next = {};
         baseTable.rows.forEach((row, index) => {
-            const stt = String(row?.cells?.[0]?.value || "").trim();
             const criteria = String(row?.cells?.[1]?.value || "").trim();
-            const rowKey = stt || criteria || `row-${index}`;
-
-            let options = resolveSectionOptions(stt);
-            if (!options.length) options = resolveSectionOptions(criteria);
-            if (!options.length) options = resolveSectionOptions(rowKey);
-
+            const rowKey = criteria || `row-${index}`;
+            const options = resolveSectionOptions(criteria);
             if (options[0]) next[rowKey] = options[0].value;
         });
         return next;
@@ -335,6 +383,7 @@ export default function FormViewer({ formId }) {
     useEffect(() => {
         setCriteriaSelectValueByRow(computeDefaultCriteria());
     }, [computeDefaultCriteria]);
+
 
     // State cho cell input (theo địa chỉ Excel)
     const [cellInputs, setCellInputs] = useState({});
@@ -367,6 +416,14 @@ export default function FormViewer({ formId }) {
         );
         return i >= 0 ? i : 6; // fallback: col_7 (index 6)
     }, [template]);
+
+    useEffect(() => {
+        if (scoreColIdx == null) return;
+        setTable((prev) => {
+            if (!prev) return prev;
+            return applyBaseScoreDefaults(prev, scoreColIdx);
+        });
+    }, [scoreColIdx, baseTable]);
 
     const planColIdx = useMemo(() => {
         const cols = template?.schema?.table?.columns || [];
@@ -479,6 +536,22 @@ export default function FormViewer({ formId }) {
     }, [childrenScoreAddrs]);
 
     // Khi người dùng chọn tiêu chí tại dòng II/III/IV/V
+    const buildParentFormula = (criteriaLabel, childAddresses) => {
+        const addrs = (childAddresses || []).filter(Boolean);
+        if (isQualitativeLabel(criteriaLabel)) {
+            if (!addrs.length) return `=${QUALITATIVE_BASE_SCORE}`;
+            return `=${QUALITATIVE_BASE_SCORE}-SUM(${addrs.join(",")})`;
+        }
+        if (isDisciplineLabel(criteriaLabel)) {
+            if (!addrs.length) return `=${DISCIPLINE_BASE_SCORE}`;
+            const sumExpr = addrs.length === 1 ? addrs[0] : `SUM(${addrs.join(",")})`;
+            const baseMinusExpr = `${DISCIPLINE_BASE_SCORE}-${sumExpr}`;
+            return `=IF(${baseMinusExpr}<0,0,${baseMinusExpr})`;
+        }
+        if (!addrs.length) return "=0";
+        return `=SUM(${addrs.join(",")})`;
+    };
+
     const handleSectionChoose = (rowIndex, rowKey, label) => {
         const scoreColLetter = numToCol(scoreColIdx + 1); // ví dụ 7 -> 'G'
         const childScoreAddr = `${scoreColLetter}${virtualRowNo}`;
@@ -513,9 +586,10 @@ export default function FormViewer({ formId }) {
             // 2) Cập nhật công thức SUM(...) cho ô điểm của dòng La Mã
             const parentRow = nextRows[rowIndex];
             const parentCells = [...(parentRow?.cells || [])];
+            const criteria = String(parentRow?.cells?.[1]?.value || "").trim();
             parentCells[scoreColIdx] = {
                 ...parentCells[scoreColIdx],
-                formula: `=SUM(${nextAddrs.join(",")})`,
+                formula: buildParentFormula(criteria, nextAddrs),
             };
             nextRows[rowIndex] = { ...parentRow, cells: parentCells };
 
@@ -529,12 +603,15 @@ export default function FormViewer({ formId }) {
         setChildrenScoreAddrs((prev) => ({ ...prev, [rowIndex]: nextAddrs }));
         setVirtualRowNo((n) => n + 1);
 
-        // 5) Reset riêng ô Select của dòng này về option đầu tiên theo yêu cầu trước đó (key theo La Mã)
-        const defaultOption = resolveSectionOptions(rowKey)[0];
+        // 5) Reset lựa chọn của dòng về option đầu tiên dựa trên tiêu chí (ưu tiên label)
+        const parentRow = table?.rows?.[rowIndex];
+        const criteria = String(parentRow?.cells?.[1]?.value || "").trim();
+        const key = criteria || `row-${rowIndex}`;
+        const defaultOption = resolveSectionOptions(criteria)[0];
         if (defaultOption) {
             setCriteriaSelectValueByRow((m) => ({
                 ...m,
-                [rowKey]: defaultOption.value,
+                [key]: defaultOption.value,
             }));
         }
     };
@@ -558,11 +635,10 @@ export default function FormViewer({ formId }) {
             const parentRow = nextRows[parentRowIndex];
             if (parentRow && parentRow.cells) {
                 const parentCells = [...parentRow.cells];
+                const criteria = String(parentRow?.cells?.[1]?.value || "").trim();
                 parentCells[scoreColIdx] = {
                     ...parentCells[scoreColIdx],
-                    formula: remainingAddrs.length
-                        ? `=SUM(${remainingAddrs.join(",")})`
-                        : "=0",
+                    formula: buildParentFormula(criteria, remainingAddrs),
                 };
                 nextRows[parentRowIndex] = { ...parentRow, cells: parentCells };
             }
@@ -955,14 +1031,15 @@ export default function FormViewer({ formId }) {
             saveAs(blob, fileName);
 
             const restoredTable = cloneTable(baseTable);
-            const initialInputs = restoredTable ? buildInitialInputs(restoredTable) : {};
+            const resetTable = applyBaseScoreDefaults(restoredTable, scoreColIdx);
+            const initialInputs = resetTable ? buildInitialInputs(resetTable) : {};
             const defaultCriteria = computeDefaultCriteria();
 
             setChildrenScoreAddrs({});
             setVirtualRowNo(1000);
             setCriteriaSelectValueByRow(defaultCriteria);
             setCellInputs(initialInputs);
-            setTable(restoredTable ?? null);
+            setTable(resetTable ?? null);
         } catch (e) {
             console.error(e);
             message.error(e?.message || "Xuất Excel thất bại");

@@ -11,7 +11,7 @@ import { EditOutlined } from '@ant-design/icons';
 // - computedByAddr: { [addr]: number|string }
 // - onCellChange: (addr, value) => void
 // - sectionOptions?: { II?: {label:string,value:string}[], III?:..., IV?:..., V?:... }
-// - onSectionChoose?: (rowIndex:number, roman:'II'|'III'|'IV'|'V', label:string) => void
+// - onSectionChoose?: (rowIndex:number, rowKey:string, label:string) => void
 // - selectValueByRow?: { [rowIndex:number]: string }
 // - scoreColIdx?: number
 // - childAddrToParentRow?: { [childScoreAddr:string]: number }
@@ -43,13 +43,13 @@ export default function SchemaTable({
         return rest;
     });
 
-    const getOptionsForRow = (romanKey, criteriaText) => {
-        const romanTrim = String(romanKey || '').trim();
+    const norm = (s) => String(s || '')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase();
+
+    const getOptionsForRow = (criteriaText) => {
         const criteriaTrim = String(criteriaText || '').trim();
 
-        if (romanTrim && Array.isArray(sectionOptions[romanTrim]) && sectionOptions[romanTrim].length) {
-            return sectionOptions[romanTrim];
-        }
         if (criteriaTrim && Array.isArray(sectionOptions[criteriaTrim]) && sectionOptions[criteriaTrim].length) {
             return sectionOptions[criteriaTrim];
         }
@@ -62,11 +62,6 @@ export default function SchemaTable({
         );
         return match ? match[1] : [];
     };
-
-    // Normalize Vietnamese text (remove diacritics, lowercase)
-    const norm = (s) => String(s || '')
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        .toLowerCase();
 
     // Heuristic: numeric columns (scores/weights/plans/actual/ratios)
     const isNumericColumn = (label) => {
@@ -221,13 +216,10 @@ export default function SchemaTable({
                     </thead>
                     <tbody>
                     {table.rows.map((row, rIdx) => {
-                        const roman = row?.cells?.[0]?.value; // cột STT (A)
                         const criteriaText = row?.cells?.[1]?.value;
-                        const options = getOptionsForRow(roman, criteriaText);
+                        const options = getOptionsForRow(criteriaText);
                         const isSectionRow = options.length > 0;
-                        const romanKey = String(roman || '').trim();
-                        const criteriaLabel = String(criteriaText || '').trim();
-                        const rowKey = romanKey || criteriaLabel || `row-${rIdx}`;
+                        const rowKey = String(criteriaText || '').trim() || `row-${rIdx}`;
                         // Dòng con: có ô điểm (cột score) là input và addr thuộc map childAddrToParentRow
                         const scoreCell = (row?.cells || [])[scoreColIdx];
                         const childScoreAddr = (scoreCell && scoreCell.input && scoreCell.addr) ? scoreCell.addr : null;

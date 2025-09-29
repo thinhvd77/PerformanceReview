@@ -455,6 +455,7 @@ export const listExports = async (req, res) => {
 
         const repo = AppDataSource.getRepository(ExportRecord.options.name);
         const qb = repo.createQueryBuilder('e')
+            .leftJoinAndSelect('e.employee', 'employee')
             .orderBy('e.id', 'DESC')
             .skip((page - 1) * pageSize)
             .take(pageSize);
@@ -464,7 +465,26 @@ export const listExports = async (req, res) => {
             qb.where("LOWER(e.fileName) LIKE :q", {q: `%${q}%`});
         }
 
-        const [data, total] = await qb.getManyAndCount();
+        const [entities, total] = await qb.getManyAndCount();
+
+        const data = entities.map((item) => {
+            const employee = item.employee;
+            const meta = item?.table?.meta || {};
+            return {
+                id: item.id,
+                employee_code: item.employee_code,
+                formId: item.formId,
+                fileName: item.fileName,
+                filePath: item.filePath,
+                table: item.table,
+                createdAt: item.createdAt,
+                employee_name: meta.employee_name || employee?.fullname || null,
+                fullname: employee?.fullname ?? null,
+                branch: employee?.branch ?? null,
+                department: employee?.department ?? null,
+            };
+        });
+
         res.json({data, total, page, pageSize});
     } catch (err) {
         res.status(500).json({message: 'Failed to list exports'});

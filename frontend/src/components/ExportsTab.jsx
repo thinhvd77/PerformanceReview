@@ -8,6 +8,24 @@ import {useAuth} from '../contexts/authContext.jsx';
 
 const {Title, Text} = Typography;
 
+const branchs = {
+    hs: 'Hội sở',
+    cn6: 'Chi nhánh 6',
+    nh: 'Chi nhánh Nam Hoa'
+}
+
+const departments = {
+    kt: 'Kế toán & ngân quỹ',
+    pgd: 'Phòng giao dịch Bình Tây',
+    cn: 'Phòng Khách hàng cá nhân',
+    dn: 'Phòng Khách hàng doanh nghiệp',
+    th: 'Phòng Tổng hợp',
+    ktrs: 'Phòng Kiểm tra giám sát nội bộ',
+    qlrr: 'Phòng Kế hoạch & quản lý rủi ro',
+    kh: 'Phòng Khách hàng',
+    gd: 'Ban giám đốc',
+};
+
 export default function ExportsTab() {
     const navigate = useNavigate();
     const [q, setQ] = useState('');
@@ -24,12 +42,12 @@ export default function ExportsTab() {
 
     // Extract unique branch and department options from data
     const branchOptions = useMemo(() => {
-        const uniqueBranches = [...new Set(rows.filter(r => r?.meta?.branchId).map(r => r.meta.branchId))];
+        const uniqueBranches = [...new Set(rows.filter(r => r?.branch).map(r => branchs[r.branch] || r.branch))];
         return uniqueBranches.sort();
     }, [rows]);
 
     const departmentOptions = useMemo(() => {
-        const uniqueDepartments = [...new Set(rows.filter(r => r?.meta?.departmentId).map(r => r.meta.departmentId))];
+        const uniqueDepartments = [...new Set(rows.filter(r => r?.department).map(r => departments[r.department] || r.department))];
         return uniqueDepartments.sort();
     }, [rows]);
 
@@ -50,7 +68,7 @@ export default function ExportsTab() {
             setLoading(false);
         }
     };
-
+    
     useEffect(() => {
         fetchList().then();
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -113,7 +131,7 @@ export default function ExportsTab() {
             key: 'branch',
             render: (_, r) => (
                 <span>
-          {r?.departmentId && <Tag color="geekblue">{r.departmentId.includes('hs') ? 'Hội sở' : '-'}</Tag>}
+          {r?.branch && <Tag color="geekblue">{r?.branch.includes('hs') ? 'Hội sở' : '-'}</Tag>}
         </span>
             ),
         },
@@ -122,7 +140,7 @@ export default function ExportsTab() {
             key: 'dept',
             render: (_, r) => (
                 <span>
-          {r?.departmentId && <Tag color="green">{r.departmentId.includes('kt') ? 'Kế toán & ngân quỹ' : '-'}</Tag>}
+          {r?.department && <Tag color="green">{r.department.includes('kt') ? 'Kế toán & ngân quỹ' : '-'}</Tag>}
         </span>
             ),
         },
@@ -190,11 +208,12 @@ export default function ExportsTab() {
                             placeholder="Lọc theo chi nhánh..."
                             style={{minWidth: 200}}
                             optionFilterProp="children"
+                            allowClear
                         >
                             <Select.Option value="">Tất cả chi nhánh</Select.Option>
                             {branchOptions.map(branch => (
                                 <Select.Option key={branch} value={branch}>
-                                    CN: {branch}
+                                    {branch}
                                 </Select.Option>
                             ))}
                         </Select>
@@ -204,11 +223,12 @@ export default function ExportsTab() {
                             placeholder="Lọc theo phòng ban..."
                             style={{minWidth: 200}}
                             optionFilterProp="children"
+                            allowClear
                         >
                             <Select.Option value="">Tất cả phòng ban</Select.Option>
                             {departmentOptions.map(department => (
                                 <Select.Option key={department} value={department}>
-                                    PB: {department}
+                                    {department}
                                 </Select.Option>
                             ))}
                         </Select>
