@@ -283,7 +283,11 @@ SECTION_OPTIONS[D_SECTION_LABEL_ALT] = SECTION_OPTIONS.D;
 SECTION_OPTIONS[normalizeText(D_SECTION_LABEL_ALT)] = SECTION_OPTIONS.D;
 const QUALITATIVE_LABEL = "Chỉ tiêu định tính";
 const QUALITATIVE_LABEL_NORMALIZED = normalizeText(QUALITATIVE_LABEL);
-const QUALITATIVE_BASE_SCORE = 20;
+const QUALITATIVE_BENCHMARK_LABEL = "Điểm chuẩn";
+const QUALITATIVE_BENCHMARK_LABEL_NORMALIZED = normalizeText(
+    QUALITATIVE_BENCHMARK_LABEL
+);
+const QUALITATIVE_BASE_SCORE_DEFAULT = 20;
 const DISCIPLINE_BASE_SCORE = 10;
 const DISCIPLINE_LABEL_NORMALIZED = normalizeText(D_SECTION_LABEL);
 const DISCIPLINE_LABEL_ALT_NORMALIZED = normalizeText(D_SECTION_LABEL_ALT);
@@ -297,6 +301,35 @@ const isDisciplineLabel = (value) => {
         normalized === DISCIPLINE_LABEL_NORMALIZED ||
         normalized === DISCIPLINE_LABEL_ALT_NORMALIZED
     );
+};
+
+const getQualitativeBaseScoreFromTable = (tableData) => {
+    if (!tableData?.rows || !Array.isArray(tableData.columns)) return null;
+
+    const benchmarkColIdx = tableData.columns.findIndex((col) => {
+        const normalized = normalizeText(col?.label);
+        if (!normalized) return false;
+        return normalized.includes(QUALITATIVE_BENCHMARK_LABEL_NORMALIZED);
+    });
+    if (benchmarkColIdx < 0) return null;
+
+    const targetRow = tableData.rows.find((row) =>
+        isQualitativeLabel(row?.cells?.[1]?.value)
+    );
+    if (!targetRow?.cells?.[benchmarkColIdx]) return null;
+
+    const cell = targetRow.cells[benchmarkColIdx];
+    const candidates = [cell?.value, cell?.text, cell?.displayValue];
+    if (typeof cell?.formula === "string") {
+        candidates.push(cell.formula.replace(/^=/, ""));
+    }
+
+    for (const candidate of candidates) {
+        const parsed = parseNumberAnyLocale(candidate);
+        if (parsed != null) return parsed;
+    }
+
+    return null;
 };
 
 const resolveSectionOptions = (labelKey) => {
@@ -313,6 +346,8 @@ const resolveSectionOptions = (labelKey) => {
 
 const applyBaseScoreDefaults = (tableData, scoreColIdx) => {
     if (!tableData?.rows || scoreColIdx == null) return tableData;
+    const qualitativeBaseScore =
+        getQualitativeBaseScoreFromTable(tableData) ?? QUALITATIVE_BASE_SCORE_DEFAULT;
     let changed = false;
     const nextRows = tableData.rows.map((row) => {
         if (!row?.cells) return row;
@@ -322,7 +357,7 @@ const applyBaseScoreDefaults = (tableData, scoreColIdx) => {
 
         let desiredFormula = null;
         if (isQualitativeLabel(criteria)) {
-            desiredFormula = `=${QUALITATIVE_BASE_SCORE}`;
+            desiredFormula = `=${qualitativeBaseScore}`;
         } else if (isDisciplineLabel(criteria)) {
             desiredFormula = `=${DISCIPLINE_BASE_SCORE}`;
         }
@@ -535,12 +570,22 @@ export default function FormViewer({ formId }) {
         return m;
     }, [childrenScoreAddrs]);
 
+    const qualitativeBaseScore = useMemo(() => {
+        const fromActive = getQualitativeBaseScoreFromTable(table);
+        if (fromActive != null) return fromActive;
+        const fromTemplate = getQualitativeBaseScoreFromTable(baseTable);
+        if (fromTemplate != null) return fromTemplate;
+        return QUALITATIVE_BASE_SCORE_DEFAULT;
+    }, [table, baseTable]);
+
     // Khi người dùng chọn tiêu chí tại dòng II/III/IV/V
     const buildParentFormula = (criteriaLabel, childAddresses) => {
         const addrs = (childAddresses || []).filter(Boolean);
+        const effectiveQualitativeBase =
+            qualitativeBaseScore ?? QUALITATIVE_BASE_SCORE_DEFAULT;
         if (isQualitativeLabel(criteriaLabel)) {
-            if (!addrs.length) return `=${QUALITATIVE_BASE_SCORE}`;
-            return `=${QUALITATIVE_BASE_SCORE}-SUM(${addrs.join(",")})`;
+            if (!addrs.length) return `=${effectiveQualitativeBase}`;
+            return `=${effectiveQualitativeBase}-SUM(${addrs.join(",")})`;
         }
         if (isDisciplineLabel(criteriaLabel)) {
             if (!addrs.length) return `=${DISCIPLINE_BASE_SCORE}`;
