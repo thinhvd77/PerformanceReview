@@ -585,16 +585,28 @@ export default function FormViewer({ formId }) {
             qualitativeBaseScore ?? QUALITATIVE_BASE_SCORE_DEFAULT;
         if (isQualitativeLabel(criteriaLabel)) {
             if (!addrs.length) return `=${effectiveQualitativeBase}`;
-            return `=${effectiveQualitativeBase}-SUM(${addrs.join(",")})`;
+            return `=MAX(${effectiveQualitativeBase}-SUM(${addrs.join(",")}), 0)`;
         }
         if (isDisciplineLabel(criteriaLabel)) {
             if (!addrs.length) return `=${DISCIPLINE_BASE_SCORE}`;
             const sumExpr = addrs.length === 1 ? addrs[0] : `SUM(${addrs.join(",")})`;
             const baseMinusExpr = `${DISCIPLINE_BASE_SCORE}-${sumExpr}`;
-            return `=IF(${baseMinusExpr}<0,0,${baseMinusExpr})`;
+            return `=MAX(IF(${baseMinusExpr}<0,0,${baseMinusExpr}), 0)`;
         }
-        if (!addrs.length) return "=0";
-        return `=SUM(${addrs.join(",")})`;
+        if (!addrs.length) return "";
+        // Điểm cộng tối đa 10 điểm, điểm trừ tối đa 10 điểm, điểm thưởng tối đa 5 điểm
+        if (criteriaLabel.includes("cộng")) {
+            return `=MIN(SUM(${addrs.join(",")}), 10)`;
+        }
+
+        if (criteriaLabel.includes("trừ")) {
+            return `=MIN(SUM(${addrs.join(",")}), 10)`;
+        }
+
+        if (criteriaLabel.includes("thưởng")) {
+            return `=MIN(SUM(${addrs.join(",")}), 5)`;
+        }
+
     };
 
     const handleSectionChoose = (rowIndex, rowKey, label) => {

@@ -323,6 +323,18 @@ export const computeComputedByAddr = ({table, cellInputs, cellMap}) => {
                         });
                         return best === Infinity ? NaN : best;
                     });
+
+                    // MAX(a, b, ...)
+                    s = resolveFunc(s, 'MAX', (args) => {
+                        if (args.length === 0) return NaN;
+                        let best = -Infinity;
+                        args.forEach(a => {
+                            const v = evalArithmetic(a);
+                            const n = Number.isFinite(v) ? v : 0;
+                            if (n > best) best = n;
+                        });
+                        return best === -Infinity ? NaN : best;
+                    });
                 }
                 return s;
             };
