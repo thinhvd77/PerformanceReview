@@ -7,7 +7,7 @@ export const orgData = {
     ],
     departments: {
         'hs': [
-            { id: 'kt', name: 'Kế toán & ngân quỹ' },
+            { id: 'kt', name: 'Phòng Kế toán & ngân quỹ' },
             { id: 'pgd', name: 'Phòng giao dịch Bình Tây' },
             { id: 'cn', name: 'Phòng Khách hàng cá nhân' },
             { id: 'dn', name: 'Phòng Khách hàng doanh nghiệp' },
@@ -18,12 +18,12 @@ export const orgData = {
             { id: 'kh', name: 'Phòng Khách hàng' }
         ],
         'cn6': [
-            { id: 'cn6-kt', name: 'Kế toán & ngân quỹ' },
+            { id: 'cn6-kt', name: 'Phòng Kế toán & ngân quỹ' },
             { id: 'cn6-kh', name: 'Phòng Khách hàng' },
             { id: 'cn6-gd', name: 'Ban giám đốc' }
         ],
         'nh': [
-            { id: 'nh-kt', name: 'Kế toán & ngân quỹ' },
+            { id: 'nh-kt', name: 'Phòng Kế toán & ngân quỹ' },
             { id: 'nh-kh', name: 'Phòng Khách hàng' },
             { id: 'nh-gd', name: 'Ban giám đốc' }
         ],

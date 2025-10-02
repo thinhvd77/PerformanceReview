@@ -75,7 +75,7 @@ const getCellText = (cell) => {
 
 const findScoreColumnIndex = (columns = []) => {
     const labels = columns.map((col) => norm(col?.label ?? col ?? ''));
-    let idx = labels.findIndex((l) => l.includes('diem theo muc do hoan thanh'));
+    let idx = labels.findIndex((l) => l.includes('điem theo muc đo hoan thanh'));
     if (idx !== -1) return idx;
     idx = labels.findIndex((l) => l.includes('muc do hoan thanh') && l.includes('diem'));
     if (idx !== -1) return idx;
@@ -260,6 +260,8 @@ const extractSummaryFromTable = (table) => {
 };
 
 const extractSummaryFromFile = async (filePath) => {
+    console.log(filePath);
+    
     if (!filePath || !fs.existsSync(filePath)) return null;
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.readFile(filePath);
@@ -293,8 +295,12 @@ const extractSummaryFromFile = async (filePath) => {
     for (let r = headerRowIndex + 1; r <= rowCount; r += 1) {
         const row = ws.getRow(r);
         const label = norm(getCellText(row.getCell(2)));
+        console.log(label);
+        
         if (!label) continue;
         if (label.includes('he so hoan thanh cong viec') || label.includes('he so hoan thanh')) {
+            console.log('Found ratio at row', r);
+            
             const cell = row.getCell(scoreColExcel);
             ratioText = getCellText(cell).trim();
             const rawValue = cell?.value;
@@ -430,6 +436,8 @@ const getRecordSummary = async (record) => {
         if (record?.filePath) {
             const absPath = path.join(process.cwd(), record.filePath);
             summary = await extractSummaryFromFile(absPath);
+            console.log(summary);
+            
         }
     } catch (err) {
         console.warn('Failed to parse export file for summary:', record?.id, err?.message || err);
@@ -578,6 +586,29 @@ export const exportDepartmentSummary = async (req, res) => {
         const branchName = mapBranchName(branch);
         const departmentName = mapDepartmentName(branch, department);
 
+        const shortDeptNameMap = {
+            'Phòng Kế toán & ngân quỹ': 'P.KT&NGQ',
+            'Phòng giao dịch Bình Tây': 'PGD Bình Tây',
+            'Phòng Khách hàng cá nhân': 'P.KHCN',
+            'Phòng Khách hàng doanh nghiệp': 'P.KHDN',
+            'Phòng Khách hàng': 'P.KH',
+            'Phòng Tổng hợp': 'P.TH',
+            'Phòng Kiểm tra giám sát nội bộ': 'P.KTGSNB',
+            'Phòng Kế hoạch & quản lý rủi ro': 'P.KH&QLRR',
+            'Ban giám đốc': 'BGĐ',
+        };
+
+        const shortDeptNameMapHead = {
+            'Phòng Kế toán & ngân quỹ': 'Phòng KT&NGQ',
+            'Phòng giao dịch Bình Tây': 'PGD BÌNH TÂY',
+            'Phòng Khách hàng cá nhân': 'Phòng KHCN',
+            'Phòng Khách hàng doanh nghiệp': 'Phòng KHDN',
+            'Phòng Khách hàng': 'Phòng KHÁCH HÀNG',
+            'Phòng Tổng hợp': 'Phòng TỔNG HỢP',
+            'Phòng Kiểm tra giám sát nội bộ': 'Phòng KTGSNB',
+            'Phòng Kế hoạch & quản lý rủi ro': 'Phòng KH&QLRR',
+        };
+
         const summaries = await Promise.all(records.map(async (record) => ({
             record,
             summary: await getRecordSummary(record),
@@ -585,16 +616,123 @@ export const exportDepartmentSummary = async (req, res) => {
 
         const workbook = new ExcelJS.Workbook();
         const ws = workbook.addWorksheet('Tong ket xep loai');
+
+        ws.pageSetup = {
+            paperSize: 9, // A4
+            orientation: 'portrait',
+            horizontalCentered: true,
+            margins: { left: 0.25, right: 0.25, top: 0.25, bottom: 0.25, header: 0.05, footer: 0.05 },
+            fitToHeight: 0,
+        };
+
+        ws.mergeCells('A1:B1');
+        ws.getCell('A1').value = 'NGÂN HÀNG NÔNG NGHIỆP';
+        ws.getCell('A1').font = { name: 'Times New Roman', size: 12 };
+        ws.getCell('A1').alignment = { horizontal: 'center' };
+
+        ws.mergeCells('A2:B2');
+        ws.getCell('A2').value = 'VÀ PHÁT TRIỂN NÔNG THÔN VIỆT NAM';
+        ws.getCell('A2').font = { name: 'Times New Roman', size: 12 };
+        ws.getCell('A2').alignment = { horizontal: 'center' };
+
+        ws.mergeCells('A3:B3');
+        ws.getCell('A3').value = branchName === 'Hội sở' ? 'CHI NHÁNH BẮC TPHCM' : branchName.toUpperCase();
+        ws.getCell('A3').font = { name: 'Times New Roman', size: 12, bold: true };
+        ws.getCell('A3').alignment = { horizontal: 'center' };
+
+        ws.mergeCells('A4:B4');
+        ws.getCell('A4').value = shortDeptNameMapHead[departmentName].toUpperCase() || departmentName.toUpperCase();
+        ws.getCell('A4').font = { name: 'Times New Roman', size: 12, bold: true };
+        ws.getCell('A4').alignment = { horizontal: 'center' };
+
+        ws.mergeCells('D1:F1');
+        ws.getCell('D1').value = 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM';
+        ws.getCell('D1').font = { name: 'Times New Roman', size: 12, bold: true };
+        ws.getCell('D1').alignment = { horizontal: 'center' };
+
+        ws.mergeCells('D2:F2');
+        ws.getCell('D2').value = 'Độc lập - Tự do - Hạnh phúc';
+        ws.getCell('D2').font = { name: 'Times New Roman', size: 12, bold: true, underline: true };
+        ws.getCell('D2').alignment = { horizontal: 'center' };
+
+        // ws.mergeCells('E4:F4');
+        ws.getCell('F4').value = 'Phụ lục 05/KTL-TH';
+        ws.getCell('F4').font = { name: 'Times New Roman', size: 12, italic: true };
+        ws.getCell('F4').alignment = { horizontal: 'right' };
+
+        ws.addRow([]);
+
+        ws.getRow(6).height = 40;
+
+        ws.mergeCells('B6:E6');
+        ws.getCell('B6').value = 'TỔNG HỢP HỆ SỐ HOÀN THÀNH CÔNG VIỆC VÀ XẾP LOẠI \n CỦA NGƯỜI LAO ĐỘNG';
+        ws.getCell('B6').font = { name: 'Times New Roman', size: 15, bold: true };
+        ws.getCell('B6').alignment = { horizontal: 'center', wrapText: true };
+        // ws.getCell('A6').height = 40;
+
+        let quarter = 'I';
+        const month = new Date().getMonth();
+        if (month >= 4 && month <= 6) quarter = 'II';
+        else if (month >= 7 && month <= 9) quarter = 'III';
+        else if (month >= 10 && month <= 12) quarter = 'IV';
+
+        ws.mergeCells('B7:E7');
+        ws.getCell('B7').value = `QUÝ ${quarter} NĂM ${new Date().getFullYear()}`;
+        ws.getCell('B7').font = { name: 'Times New Roman', size: 12, bold: true };
+        ws.getCell('B7').alignment = { horizontal: 'center' };
+
+        ws.addRow([]);
+
+        ws.mergeCells('A9:F9');
+        ws.getCell('A9').value = `Căn cứ chỉ tiêu Quý ${quarter} năm ${new Date().getFullYear()} được giao;`;
+        ws.getCell('A9').font = { name: 'Times New Roman', size: 12 };
+        ws.getCell('A9').alignment = { horizontal: 'left' };
+
+        ws.mergeCells('A10:F10');
+        ws.getCell('A10').value = `Căn cứ kết quả thực hiện của ${shortDeptNameMapHead[departmentName]};`;
+        ws.getCell('A10').font = { name: 'Times New Roman', size: 12 };
+        ws.getCell('A10').alignment = { horizontal: 'left' };
+
+        ws.mergeCells('A11:F11');
+        ws.getCell('A11').value = `Căn cứ Biên họp phòng ngày ${new Date().toLocaleDateString('vi-VN')} của ${shortDeptNameMapHead[departmentName]};`;
+        ws.getCell('A11').font = { name: 'Times New Roman', size: 12 };
+        ws.getCell('A11').alignment = { horizontal: 'left' };
+
+        ws.mergeCells('A12:F12');
+        ws.getCell('A12').value = `${shortDeptNameMapHead[departmentName]} tổng hợp mức độ hoàn thành công việc của CBNV như sau:`;
+        ws.getCell('A12').font = { name: 'Times New Roman', size: 12 };
+        ws.getCell('A12').alignment = { horizontal: 'left' };
+        ws.addRow([]);
+
+        
         ws.columns = [
-            {header: 'STT', key: 'stt', width: 6},
-            {header: 'Họ và tên', key: 'employeeName', width: 28},
-            {header: 'Chức vụ', key: 'position', width: 24},
-            {header: 'Chi nhánh', key: 'branch', width: 18},
-            {header: 'Phòng ban', key: 'department', width: 22},
-            {header: 'Hệ số hoàn thành', key: 'ratio', width: 20},
-            {header: 'Xếp loại', key: 'classification', width: 16},
+            {key: 'stt', width: 6, font: {bold: true}},
+            {key: 'employeeName', width: 37, font: {bold: true}},
+            {key: 'department', width: 14, font: {bold: true}},
+            {key: 'position', width: 10, font: {bold: true}},
+            {key: 'ratio', width: 27, font: {bold: true}},
+            {key: 'classification', width: 10, font: {bold: true}},
         ];
-        ws.getRow(1).font = {bold: true};
+
+        const headerRow = ws.addRow({
+            stt: 'STT',
+            employeeName: 'Họ và tên',
+            department: 'Đơn vị/phòng',
+            position: 'Chức vụ',
+            ratio: 'Hệ số hoàn thành \n hiệu quả công việc',
+            classification: 'Xếp loại',
+        });
+        headerRow.font = { name: 'Times New Roman', size: 12, bold: true };
+        headerRow.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+        // headerRow.height = 30;
+        headerRow.eachCell((cell) => {
+            cell.border = {
+                top: {style: 'thin'},
+                left: {style: 'thin'},
+                bottom: {style: 'thin'},
+                right: {style: 'thin'}
+            };
+        });
 
         summaries.forEach(({record, summary}, index) => {
             const submittedDate = toDate(record.createdAt);
@@ -607,18 +745,44 @@ export const exportDepartmentSummary = async (req, res) => {
                 employeeName: record.employee?.fullname || record.employee_code || '',
                 position: summary?.position || '',
                 branch: branchName,
-                department: departmentName,
+                department: shortDeptNameMap[departmentName] || departmentName,
                 ratio: ratioValue ?? ratioText,
                 classification: summary?.classification || '',
             });
 
+            row.font = { name: 'Times New Roman', size: 12 };
+            // row.height = 20;
+            row.eachCell((cell) => {
+                cell.border = {
+                    top: {style: 'thin'},
+                    left: {style: 'thin'},
+                    bottom: {style: 'thin'},
+                    right: {style: 'thin'}
+                };
+                cell.alignment = { vertical: 'middle', wrapText: true };
+            });
+
             if (ratioValue !== null) {
                 row.getCell('ratio').value = ratioValue;
-                row.getCell('ratio').numFmt = '0.00%';
-                row.getCell('ratio').alignment = {horizontal: 'center'};
+                row.getCell('ratio').numFmt = '0.00';
+                row.getCell('ratio').alignment = {horizontal: 'center', vertical: 'middle' };
             }
-            row.getCell('stt').alignment = {horizontal: 'center'};
+            row.getCell('position').alignment = {horizontal: 'center', vertical: 'middle' };
+            row.getCell('classification').alignment = {horizontal: 'center', vertical: 'middle' };
+            row.getCell('stt').alignment = {horizontal: 'center', vertical: 'middle'};
         });
+
+        ws.addRow([]);
+
+        ws.mergeCells(`A${ws.lastRow.number + 1}:B${ws.lastRow.number + 1}`);
+        ws.getCell(`A${ws.lastRow.number}`).value = 'LẬP BIỂU';
+        ws.getCell(`A${ws.lastRow.number}`).font = { name: 'Times New Roman', size: 12, bold: true };
+        ws.getCell(`A${ws.lastRow.number}`).alignment = { horizontal: 'center' };
+
+        ws.mergeCells(`D${ws.lastRow.number}:F${ws.lastRow.number}`);
+        ws.getCell(`D${ws.lastRow.number}`).value = 'TRƯỞNG PHÒNG/ĐƠN VỊ';
+        ws.getCell(`D${ws.lastRow.number}`).font = { name: 'Times New Roman', size: 12, bold: true };
+        ws.getCell(`D${ws.lastRow.number}`).alignment = { horizontal: 'center' };
 
         const buffer = await workbook.xlsx.writeBuffer();
         const output = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);

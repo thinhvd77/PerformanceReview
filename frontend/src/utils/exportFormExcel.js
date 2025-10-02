@@ -79,7 +79,7 @@ const findScoreColIdx = (columns) => {
     const colCount = labels.length;
 
     // 1) chính xác nhất
-    let idx = labels.findIndex(l => l.includes('diem theo muc do hoan thanh'));
+    let idx = labels.findIndex(l => l.includes('điem theo muc đo hoan thanh'));
     if (idx !== -1) return idx;
 
     // 2) chứa cả “mức độ hoàn thành” và “điểm”
@@ -118,7 +118,7 @@ export default async function exportFormExcel({
     readOnly = false,
     allowResizeForPrint = false,
     injectRankRow = true,
-    rankRowRoman = 'VII',
+    rankRowRoman = '',
     rankRowLabel = 'Xếp loại lao động',
     returnBuffer = false,
 }) {
@@ -190,7 +190,72 @@ export default async function exportFormExcel({
         ws.getCell('D3').value = 'Độc lập - Tự do - Hạnh phúc';
         ws.getCell('D3').alignment = { horizontal: 'center' };
         ws.getCell('D3').font = { name: 'Times New Roman', size: 11, bold: true, underline: true };
-    } else {
+    } else if (branch === 'hs' && role === 'Phó giám đốc chi nhánh') {
+        // ===== HEADER =====
+        safeMergeCells(ws, 'A2:B2');
+        ws.getCell('A2').value = 'NGÂN HÀNG NÔNG NGHIỆP';
+        ws.getCell('A2').font = { name: 'Times New Roman', size: 11 };
+        ws.getCell('A2').alignment = { horizontal: 'center' };
+
+        safeMergeCells(ws, 'A3:B3');
+        ws.getCell('A3').value = 'VÀ PHÁT TRIỂN NÔNG THÔN VIỆT NAM';
+        ws.getCell('A3').font = { name: 'Times New Roman', size: 11 };
+        ws.getCell('A3').alignment = { horizontal: 'center' };
+
+        safeMergeCells(ws, 'A4:B4');
+        ws.getCell('A4').value = 'CHI NHÁNH BẮC TPHCM';
+        ws.getCell('A4').font = { name: 'Times New Roman', size: 11, bold: true, underline: true };
+        ws.getCell('A4').alignment = { horizontal: 'center' };
+
+        safeMergeCells(ws, 'D2:G2');
+        ws.getCell('D2').value = 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM';
+        ws.getCell('D2').alignment = { horizontal: 'center' };
+        ws.getCell('D2').font = { name: 'Times New Roman', bold: true, size: 11 };
+
+        safeMergeCells(ws, 'D3:G3');
+        ws.getCell('D3').value = 'Độc lập - Tự do - Hạnh phúc';
+        ws.getCell('D3').alignment = { horizontal: 'center' };
+        ws.getCell('D3').font = { name: 'Times New Roman', size: 11, bold: true, underline: true };
+    } else if (role.includes('Trưởng phòng')) {
+        // ===== HEADER =====
+        safeMergeCells(ws, 'A2:C2');
+        ws.getCell('A2').value = 'NGÂN HÀNG NÔNG NGHIỆP';
+        ws.getCell('A2').font = { name: 'Times New Roman', size: 11 };
+        ws.getCell('A2').alignment = { horizontal: 'center' };
+
+        safeMergeCells(ws, 'A3:C3');
+        ws.getCell('A3').value = 'VÀ PHÁT TRIỂN NÔNG THÔN VIỆT NAM';
+        ws.getCell('A3').font = { name: 'Times New Roman', size: 11 };
+        ws.getCell('A3').alignment = { horizontal: 'center' };
+
+        safeMergeCells(ws, 'A4:C4');
+        ws.getCell('A4').value = 'CHI NHÁNH BẮC TPHCM';
+        ws.getCell('A4').font = { name: 'Times New Roman', size: 11, bold: true, underline: true };
+        ws.getCell('A4').alignment = { horizontal: 'center' };
+
+        safeMergeCells(ws, 'A5:C5');
+        if ((branch === 'cn6' || branch === 'nh') && (role === 'director' || role === 'deputy_director')) {
+            ws.getCell('A5').value = branch === 'cn6' ? 'CHI NHÁNH 6' : 'CHI NHÁNH NAM HOA';
+        } else if (department === 'pgd' && (role === 'director' || role === 'deputy_director')) {
+            ws.getCell('A5').value = 'PHÒNG GIAO DỊCH BÌNH TÂY';
+        } else {
+            const deptName = department ? (deptMap[department] || '') : '';
+            ws.getCell('A5').value = `${deptName}`;
+            ws.getCell('A5').font = { name: 'Times New Roman', size: 11, bold: true };
+            ws.getCell('A5').alignment = { horizontal: 'center' };
+        }
+
+        safeMergeCells(ws, 'F2:G2');
+        ws.getCell('F2').value = 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM';
+        ws.getCell('F2').alignment = { horizontal: 'center' };
+        ws.getCell('F2').font = { name: 'Times New Roman', bold: true, size: 11 };
+
+        safeMergeCells(ws, 'F3:G3');
+        ws.getCell('F3').value = 'Độc lập - Tự do - Hạnh phúc';
+        ws.getCell('F3').alignment = { horizontal: 'center' };
+        ws.getCell('F3').font = { name: 'Times New Roman', size: 11, bold: true, underline: true };
+    } 
+    else {
         // ===== HEADER =====
         safeMergeCells(ws, 'A2:C2');
         ws.getCell('A2').value = 'NGÂN HÀNG NÔNG NGHIỆP';
@@ -250,9 +315,19 @@ export default async function exportFormExcel({
     ws.getCell('A7').alignment = { horizontal: 'center' };
 
     safeMergeCells(ws, `A8:${toCol(colCount)}8`);
-    ws.getCell('A8').value = `Họ và tên: ${employee_name || '.............................................'}`;
-    ws.getCell('A8').font = { name: 'Times New Roman', size: 11 };
-    ws.getCell('A8').alignment = { horizontal: 'left' };
+    const cellA8 = ws.getCell('A8');
+    if (employee_name) {
+        cellA8.value = {
+            richText: [
+                { text: 'Họ và tên: ', font: { name: 'Times New Roman', size: 11 } },
+                { text: employee_name, font: { name: 'Times New Roman', size: 11, bold: true } },
+            ],
+        };
+    } else {
+        cellA8.value = 'Họ và tên: .............................................';
+        cellA8.font = { name: 'Times New Roman', size: 11 };
+    }
+    cellA8.alignment = { horizontal: 'left' };
 
     safeMergeCells(ws, `A9:${toCol(colCount)}9`);
     ws.getCell('A9').value = `Chức vụ: ${role || '...................................................'}`;
@@ -392,6 +467,22 @@ export default async function exportFormExcel({
     const tableEndRow = excelRow - 1;
     let rankRowNumber = null;
 
+    // Get last roman index from table
+    let lastRoman = "I";
+    (table?.rows || [])
+        .map((r) => String(r?.cells?.[0]?.value || "").trim())
+        .forEach((v) => {
+            if (/^(I|II|III|IV|V|VI|VII|VIII|IX|X)$/i.test(v)) lastRoman = v.toUpperCase();
+        });
+    if (injectRankRow && !rankRowRoman) {
+        // Auto-increment roman numeral
+        const romanNumerals = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
+        const lastIndex = romanNumerals.indexOf(lastRoman);
+        rankRowRoman = lastIndex
+            ? (lastIndex + 1 < romanNumerals.length ? romanNumerals[lastIndex + 1] : `X+`)
+            : 'I';
+    }
+
     // === HÀNG XẾP LOẠI (tự chèn & merge) ===
     if (injectRankRow) {
         const r = excelRow;
@@ -456,9 +547,9 @@ export default async function exportFormExcel({
         cnCell.value = 'XÁC NHẬN CỦA ĐƠN VỊ';
         cnCell.font = { name: 'Times New Roman', size: 11, bold: true };
         cnCell.alignment = { horizontal: 'center' };
-    } else if ((department === 'pgd' && role === 'deputy_director') || role === 'deputy_manager' || role === 'employee') {
+    } else if ((department === 'pgd' && role === 'deputy_director') || role.includes('Phó phòng') || role.includes('Nhân viên')) {
         const pgdCell = ws.getCell(`B${dateRow + 1}`);
-        pgdCell.value = 'XÁC NHẬN CỦA PHÒNG';
+        pgdCell.value = 'XÁC NHẬN CỦA PHÒNG/ĐƠN VỊ';
         pgdCell.font = { name: 'Times New Roman', size: 11, bold: true };
         pgdCell.alignment = { horizontal: 'center' };
     }

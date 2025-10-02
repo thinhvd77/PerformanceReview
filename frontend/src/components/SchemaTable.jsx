@@ -34,6 +34,7 @@ export default function SchemaTable({
         return null;
     }
     const borderStyle = '1px solid #d9d9d9';
+    
 
     // ====== Local edit buffer (không ép định dạng khi đang gõ) ======
     const [editBuf, setEditBuf] = useState({}); // { [addr]: string }
@@ -67,13 +68,10 @@ export default function SchemaTable({
     const isNumericColumn = (label) => {
         const l = norm(label);
         return (
-            l.includes('diem') ||
-            l.includes('trong so') ||
-            l.includes('ke hoach') ||
-            l.includes('thuc hien') ||
-            l.includes('he so') ||
-            l.includes('ty le') ||
-            l.includes('ti le')
+            l.includes("điem theo muc đo hoan thanh") ||
+            l.includes("trong so") ||
+            l.includes("ke hoach") ||
+            l.includes("thuc hien")
         );
     };
 
@@ -405,7 +403,7 @@ export default function SchemaTable({
                                                             if (e && e.currentTarget) e.currentTarget.blur();
                                                         }}
                                                         prefix={<EditOutlined style={{ color: '#bfbfbf' }} />}
-                                                        placeholder="Nhập..."
+                                                        placeholder="Ghi chú..."
                                                     />
                                                 )
                                             ) : (

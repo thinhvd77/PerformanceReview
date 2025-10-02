@@ -39,6 +39,8 @@ export const listFormTemplates = async (req, res) => {
 export const getFormTemplate = async (req, res) => {
   try {
     const id = parseInt(req.params.id);
+    console.log(id);
+    
     const repo = AppDataSource.getRepository(FormTemplate.options.name);
     const item = await repo.findOne({ where: { id } });
     if (!item) return res.status(404).json({ message: 'Form template not found' });

@@ -16,7 +16,8 @@ import { saveAs } from "file-saver";
 
 const { Title } = Typography;
 
-const cloneTable = (source) => (source ? JSON.parse(JSON.stringify(source)) : source);
+const cloneTable = (source) =>
+    source ? JSON.parse(JSON.stringify(source)) : source;
 
 const normalizeText = (value) =>
     String(value || "")
@@ -43,7 +44,8 @@ const parseNumberAnyLocale = (value) => {
 };
 
 const formatPercentVi = (ratio) => {
-    if (ratio === null || ratio === undefined || !Number.isFinite(ratio)) return "";
+    if (ratio === null || ratio === undefined || !Number.isFinite(ratio))
+        return "";
     const nf = new Intl.NumberFormat("vi-VN", {
         minimumFractionDigits: 0,
         maximumFractionDigits: 2,
@@ -69,6 +71,13 @@ const AUTO_GROWTH_RULES = [
         bonusLabel: "Chỉ tiêu thu dịch vụ vượt KH Quý được giao",
         key: "service-growth-bonus",
         step: 0.03,
+    },
+    {
+        growthLabel: "Thu hồi nợ đã XLRR",
+        bonusLabel: "Thu hồi nợ đã XLRR đạt từ 110% KH Quý",
+        key: "recovery-growth-bonus",
+        threshold: 1.1, // 110%
+        fixedPoints: 3, // Cộng 3 điểm
     },
 ];
 const AUTO_GROWTH_RULE_KEY_SET = new Set(
@@ -272,11 +281,14 @@ SECTION_OPTIONS[D_SECTION_LABEL] = SECTION_OPTIONS.D;
 SECTION_OPTIONS["Chỉ tiêu định tính"] = SECTION_OPTIONS.II;
 SECTION_OPTIONS[normalizeText("Chỉ tiêu định tính")] = SECTION_OPTIONS.II;
 SECTION_OPTIONS["Điểm cộng (tối đa 10 điểm)"] = SECTION_OPTIONS.III;
-SECTION_OPTIONS[normalizeText("Điểm cộng (tối đa 10 điểm)")] = SECTION_OPTIONS.III;
+SECTION_OPTIONS[normalizeText("Điểm cộng (tối đa 10 điểm)")] =
+    SECTION_OPTIONS.III;
 SECTION_OPTIONS["Điểm trừ (tối đa 10 điểm)"] = SECTION_OPTIONS.IV;
-SECTION_OPTIONS[normalizeText("Điểm trừ (tối đa 10 điểm)")] = SECTION_OPTIONS.IV;
+SECTION_OPTIONS[normalizeText("Điểm trừ (tối đa 10 điểm)")] =
+    SECTION_OPTIONS.IV;
 SECTION_OPTIONS["Điểm thưởng (tối đa 05 điểm)"] = SECTION_OPTIONS.V;
-SECTION_OPTIONS[normalizeText("Điểm thưởng (tối đa 05 điểm)")] = SECTION_OPTIONS.V;
+SECTION_OPTIONS[normalizeText("Điểm thưởng (tối đa 05 điểm)")] =
+    SECTION_OPTIONS.V;
 SECTION_OPTIONS[normalizeText(D_SECTION_LABEL)] = SECTION_OPTIONS.D;
 const D_SECTION_LABEL_ALT = "Điểm chấp hành nội quy lao động, văn hóa Agribank";
 SECTION_OPTIONS[D_SECTION_LABEL_ALT] = SECTION_OPTIONS.D;
@@ -333,7 +345,7 @@ const getQualitativeBaseScoreFromTable = (tableData) => {
 };
 
 const resolveSectionOptions = (labelKey) => {
-    const trimmed = String(labelKey || '').trim();
+    const trimmed = String(labelKey || "").trim();
     if (!trimmed) return [];
     if (SECTION_OPTIONS[trimmed]) return SECTION_OPTIONS[trimmed];
     const normalized = normalizeText(trimmed);
@@ -347,11 +359,12 @@ const resolveSectionOptions = (labelKey) => {
 const applyBaseScoreDefaults = (tableData, scoreColIdx) => {
     if (!tableData?.rows || scoreColIdx == null) return tableData;
     const qualitativeBaseScore =
-        getQualitativeBaseScoreFromTable(tableData) ?? QUALITATIVE_BASE_SCORE_DEFAULT;
+        getQualitativeBaseScoreFromTable(tableData) ??
+        QUALITATIVE_BASE_SCORE_DEFAULT;
     let changed = false;
     const nextRows = tableData.rows.map((row) => {
         if (!row?.cells) return row;
-        const criteria = String(row.cells?.[1]?.value || '').trim();
+        const criteria = String(row.cells?.[1]?.value || "").trim();
         const targetCell = row.cells?.[scoreColIdx];
         if (!targetCell) return row;
 
@@ -362,7 +375,8 @@ const applyBaseScoreDefaults = (tableData, scoreColIdx) => {
             desiredFormula = `=${DISCIPLINE_BASE_SCORE}`;
         }
 
-        if (!desiredFormula || targetCell.formula === desiredFormula) return row;
+        if (!desiredFormula || targetCell.formula === desiredFormula)
+            return row;
 
         changed = true;
         const nextCells = row.cells.map((cell, idx) =>
@@ -418,7 +432,6 @@ export default function FormViewer({ formId }) {
     useEffect(() => {
         setCriteriaSelectValueByRow(computeDefaultCriteria());
     }, [computeDefaultCriteria]);
-
 
     // State cho cell input (theo địa chỉ Excel)
     const [cellInputs, setCellInputs] = useState({});
@@ -585,11 +598,14 @@ export default function FormViewer({ formId }) {
             qualitativeBaseScore ?? QUALITATIVE_BASE_SCORE_DEFAULT;
         if (isQualitativeLabel(criteriaLabel)) {
             if (!addrs.length) return `=${effectiveQualitativeBase}`;
-            return `=MAX(${effectiveQualitativeBase}-SUM(${addrs.join(",")}), 0)`;
+            return `=MAX(${effectiveQualitativeBase}-SUM(${addrs.join(
+                ","
+            )}), 0)`;
         }
         if (isDisciplineLabel(criteriaLabel)) {
             if (!addrs.length) return `=${DISCIPLINE_BASE_SCORE}`;
-            const sumExpr = addrs.length === 1 ? addrs[0] : `SUM(${addrs.join(",")})`;
+            const sumExpr =
+                addrs.length === 1 ? addrs[0] : `SUM(${addrs.join(",")})`;
             const baseMinusExpr = `${DISCIPLINE_BASE_SCORE}-${sumExpr}`;
             return `=MAX(IF(${baseMinusExpr}<0,0,${baseMinusExpr}), 0)`;
         }
@@ -606,7 +622,6 @@ export default function FormViewer({ formId }) {
         if (criteriaLabel.includes("thưởng")) {
             return `=MIN(SUM(${addrs.join(",")}), 5)`;
         }
-
     };
 
     const handleSectionChoose = (rowIndex, rowKey, label) => {
@@ -637,6 +652,15 @@ export default function FormViewer({ formId }) {
                 input: true,
                 value: "",
             };
+            // thêm ô input ở ô kế bên ô "Điểm theo mức độ hoàn thành"
+            if (noteColIdx != null && noteColIdx !== scoreColIdx) {
+                newRow.cells[noteColIdx] = {
+                    ...newRow.cells[noteColIdx],
+                    addr: `${numToCol(noteColIdx + 1)}${virtualRowNo}`,
+                    input: true,
+                    value: "",
+                };
+            }
 
             const nextRows = [...(prev.rows || [])];
 
@@ -692,7 +716,9 @@ export default function FormViewer({ formId }) {
             const parentRow = nextRows[parentRowIndex];
             if (parentRow && parentRow.cells) {
                 const parentCells = [...parentRow.cells];
-                const criteria = String(parentRow?.cells?.[1]?.value || "").trim();
+                const criteria = String(
+                    parentRow?.cells?.[1]?.value || ""
+                ).trim();
                 parentCells[scoreColIdx] = {
                     ...parentCells[scoreColIdx],
                     formula: buildParentFormula(criteria, remainingAddrs),
@@ -726,7 +752,10 @@ export default function FormViewer({ formId }) {
             if (cell.formula) {
                 if (
                     computedByAddr &&
-                    Object.prototype.hasOwnProperty.call(computedByAddr, cell.addr)
+                    Object.prototype.hasOwnProperty.call(
+                        computedByAddr,
+                        cell.addr
+                    )
                 ) {
                     raw = computedByAddr[cell.addr];
                 } else {
@@ -734,10 +763,12 @@ export default function FormViewer({ formId }) {
                 }
             } else if (cell.input) {
                 raw = cellInputs?.[cell.addr];
-                if (raw === undefined || raw === null || raw === "") raw = cell.value;
+                if (raw === undefined || raw === null || raw === "")
+                    raw = cell.value;
             } else {
                 raw = cellInputs?.[cell.addr];
-                if (raw === undefined || raw === null || raw === "") raw = cell.value;
+                if (raw === undefined || raw === null || raw === "")
+                    raw = cell.value;
             }
         } else {
             raw = cell.value;
@@ -792,15 +823,23 @@ export default function FormViewer({ formId }) {
                 .map(([, info]) => info.row?.cells?.[scoreColIdx]?.addr)
                 .filter(Boolean);
 
+        // Lấy tiêu chí của dòng cha (dòng III) để sử dụng buildParentFormula
+        const parentRow = rows[parentRowIdx];
+        const parentCriteria = String(
+            parentRow?.cells?.[1]?.value || ""
+        ).trim();
+
         const parentFormulaFor = (autoAddrs) => {
             const allAddrs = mergeAddresses(manualAddrs, autoAddrs);
-            return allAddrs.length ? `=SUM(${allAddrs.join(',')})` : "=0";
+            return buildParentFormula(parentCriteria, allAddrs);
         };
 
         const findInsertIndex = (rowsList, parentIdx) => {
             let insertIdx = parentIdx + 1;
             while (insertIdx < rowsList.length) {
-                const roman = String(rowsList[insertIdx]?.cells?.[0]?.value || "").trim();
+                const roman = String(
+                    rowsList[insertIdx]?.cells?.[0]?.value || ""
+                ).trim();
                 if (/^(II|III|IV|V)$/i.test(roman)) break;
                 insertIdx += 1;
             }
@@ -820,13 +859,68 @@ export default function FormViewer({ formId }) {
                     normalizeText(growthLabel)
             );
 
-            const planCell =
-                growthRowIdx !== -1 ? rows[growthRowIdx]?.cells?.[planColIdx] : null;
-            const actualCell =
-                growthRowIdx !== -1 ? rows[growthRowIdx]?.cells?.[actualColIdx] : null;
+            let planValue = null;
+            let actualValue = null;
 
-            const planValue = resolveCellNumericValue(planCell);
-            const actualValue = resolveCellNumericValue(actualCell);
+            if (growthRowIdx !== -1) {
+                const planCell = rows[growthRowIdx]?.cells?.[planColIdx];
+                const actualCell = rows[growthRowIdx]?.cells?.[actualColIdx];
+
+                // Kiểm tra xem dòng cha có input không
+                const hasParentInput = actualCell?.input || actualCell?.addr;
+                const parentActualValue = resolveCellNumericValue(actualCell);
+                const parentPlanValue = resolveCellNumericValue(planCell);
+
+                if (
+                    hasParentInput &&
+                    parentActualValue !== null &&
+                    parentActualValue !== 0
+                ) {
+                    // Kiểu 1: Nhập vào dòng cha
+                    planValue = parentPlanValue;
+                    actualValue = parentActualValue;
+                } else {
+                    // Kiểu 2&3: Tính tổng từ dòng con
+                    let totalPlan = 0;
+                    let totalActual = 0;
+                    let hasChildData = false;
+
+                    // Tìm các dòng con (dòng không có số thứ tự La Mã/số)
+                    for (let i = growthRowIdx + 1; i < rows.length; i++) {
+                        const childRow = rows[i];
+                        const childSTT = String(
+                            childRow?.cells?.[0]?.value || ""
+                        ).trim();
+
+                        // Dừng khi gặp dòng có STT (dòng cha tiếp theo)
+                        if (childSTT && /^[IVXivx0-9]+$/i.test(childSTT)) break;
+
+                        const childPlanCell = childRow?.cells?.[planColIdx];
+                        const childActualCell = childRow?.cells?.[actualColIdx];
+
+                        if (childPlanCell || childActualCell) {
+                            const childPlan =
+                                resolveCellNumericValue(childPlanCell) || 0;
+                            const childActual =
+                                resolveCellNumericValue(childActualCell) || 0;
+
+                            totalPlan += childPlan;
+                            totalActual += childActual;
+
+                            if (childActual > 0) hasChildData = true;
+                        }
+                    }
+
+                    if (hasChildData || totalPlan > 0) {
+                        planValue = totalPlan > 0 ? totalPlan : parentPlanValue;
+                        actualValue = totalActual;
+                    } else {
+                        // Fallback về dòng cha
+                        planValue = parentPlanValue;
+                        actualValue = parentActualValue;
+                    }
+                }
+            }
             const valid =
                 planValue !== null &&
                 actualValue !== null &&
@@ -838,11 +932,36 @@ export default function FormViewer({ formId }) {
                 ? Math.max(0, (actualValue - planValue) / Math.abs(planValue))
                 : 0;
 
-            const step = typeof rule.step === 'number' && rule.step > 0 ? rule.step : 0.05;
-            const rawPoints =
-                positiveRatio > 0 ? Math.floor((positiveRatio + 1e-9) / step) : 0;
-            const bonusPoints = Math.min(5, rawPoints);
-            const noteText = positiveRatio > 0 ? `Vượt ${formatPercentVi(positiveRatio)}` : "";
+            // Xử lý rule có threshold và fixedPoints (như Thu hồi nợ đã XLRR)
+            let bonusPoints = 0;
+            if (rule.threshold && rule.fixedPoints) {
+                const actualRatio = valid ? actualValue / planValue : 0;
+                bonusPoints =
+                    actualRatio >= rule.threshold ? rule.fixedPoints : 0;
+            } else {
+                // Logic cũ cho các rule có step
+                const step =
+                    typeof rule.step === "number" && rule.step > 0
+                        ? rule.step
+                        : 0.05;
+                const rawPoints =
+                    positiveRatio > 0
+                        ? Math.floor((positiveRatio + 1e-9) / step)
+                        : 0;
+                bonusPoints = Math.min(5, rawPoints);
+            }
+            const noteText = (() => {
+                if (rule.threshold && rule.fixedPoints) {
+                    const actualRatio = valid ? actualValue / planValue : 0;
+                    return actualRatio >= rule.threshold
+                        ? `Đạt ${formatPercentVi(actualRatio - 1)} (≥110%)`
+                        : "";
+                } else {
+                    return positiveRatio > 0
+                        ? `Vượt ${formatPercentVi(positiveRatio)}`
+                        : "";
+                }
+            })();
 
             const removeAutoRow = () => {
                 if (!autoInfo) return false;
@@ -856,12 +975,16 @@ export default function FormViewer({ formId }) {
                     if (parentIdxNext !== -1) {
                         const parentRow = nextRows[parentIdxNext];
                         if (parentRow?.cells) {
-                            const parentCells = parentRow.cells.map((cell, idx) =>
-                                idx === scoreColIdx
-                                    ? { ...cell, formula: desiredFormula }
-                                    : cell
+                            const parentCells = parentRow.cells.map(
+                                (cell, idx) =>
+                                    idx === scoreColIdx
+                                        ? { ...cell, formula: desiredFormula }
+                                        : cell
                             );
-                            nextRows[parentIdxNext] = { ...parentRow, cells: parentCells };
+                            nextRows[parentIdxNext] = {
+                                ...parentRow,
+                                cells: parentCells,
+                            };
                         }
                     }
                     return { ...prev, rows: nextRows };
@@ -899,17 +1022,24 @@ export default function FormViewer({ formId }) {
                         0;
                     if (!columnCount) return prev;
                     const insertIdx = findInsertIndex(nextRows, parentIdxNext);
-                    const newCells = Array.from({ length: columnCount }, (_, cIdx) => ({
-                        addr: null,
-                        value: "",
-                        rowSpan: 1,
-                        colSpan: 1,
-                        hidden: false,
-                        input: false,
-                    }));
-                    if (newCells[1]) newCells[1] = { ...newCells[1], value: bonusLabel };
+                    const newCells = Array.from(
+                        { length: columnCount },
+                        (_, cIdx) => ({
+                            addr: null,
+                            value: "",
+                            rowSpan: 1,
+                            colSpan: 1,
+                            hidden: false,
+                            input: false,
+                        })
+                    );
+                    if (newCells[1])
+                        newCells[1] = { ...newCells[1], value: bonusLabel };
                     if (noteColIdx != null && newCells[noteColIdx]) {
-                        newCells[noteColIdx] = { ...newCells[noteColIdx], value: noteText };
+                        newCells[noteColIdx] = {
+                            ...newCells[noteColIdx],
+                            value: noteText,
+                        };
                     }
                     newCells[scoreColIdx] = {
                         ...newCells[scoreColIdx],
@@ -929,7 +1059,10 @@ export default function FormViewer({ formId }) {
                                 ? { ...cell, formula: desiredFormula }
                                 : cell
                         );
-                        nextRows[parentIdxNext] = { ...parentRow, cells: parentCells };
+                        nextRows[parentIdxNext] = {
+                            ...parentRow,
+                            cells: parentCells,
+                        };
                     }
                     return { ...prev, rows: nextRows };
                 });
@@ -975,7 +1108,10 @@ export default function FormViewer({ formId }) {
                         });
                         return { ...row, cells };
                     }
-                    if (normalizeText(row?.cells?.[0]?.value) === "iii" && row?.cells) {
+                    if (
+                        normalizeText(row?.cells?.[0]?.value) === "iii" &&
+                        row?.cells
+                    ) {
                         const cells = row.cells.map((cell, cIdx) => {
                             if (cIdx === scoreColIdx) {
                                 return { ...cell, formula: desiredFormula };
@@ -1003,8 +1139,8 @@ export default function FormViewer({ formId }) {
         childrenScoreAddrs,
         cellInputs,
         computedByAddr,
-    ,
-        virtualRowNo
+        ,
+        virtualRowNo,
     ]);
 
     const handleExport = async () => {
@@ -1063,7 +1199,7 @@ export default function FormViewer({ formId }) {
                 fd.append("formId", id || template?.id || "");
                 fd.append("table", JSON.stringify(table));
                 console.log(table);
-                
+
                 const resp = await api.post("/exports", fd, {
                     headers: { "Content-Type": "multipart/form-data" },
                 });
@@ -1088,8 +1224,13 @@ export default function FormViewer({ formId }) {
             saveAs(blob, fileName);
 
             const restoredTable = cloneTable(baseTable);
-            const resetTable = applyBaseScoreDefaults(restoredTable, scoreColIdx);
-            const initialInputs = resetTable ? buildInitialInputs(resetTable) : {};
+            const resetTable = applyBaseScoreDefaults(
+                restoredTable,
+                scoreColIdx
+            );
+            const initialInputs = resetTable
+                ? buildInitialInputs(resetTable)
+                : {};
             const defaultCriteria = computeDefaultCriteria();
 
             setChildrenScoreAddrs({});

@@ -86,7 +86,7 @@ export default function DashboardPage() {
     const { user } = useAuth();
     const normalizedRole = (user?.role || "").toString().toLowerCase();
     const normalizedDepartment = (user?.department || "").toString().toLowerCase();
-    const isQLRRManager = normalizedRole === "manager" && normalizedDepartment === "qlrr";
+    const isTHManager = normalizedRole === "manager" && normalizedDepartment === "th";
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState("");
@@ -144,19 +144,19 @@ export default function DashboardPage() {
     }, [applyResponse]);
 
     useEffect(() => {
-        if (!isQLRRManager) return;
+        if (!isTHManager) return;
         const preferredBranch = branch || user?.branch || "hs";
         setTargetBranch((prev) => prev || preferredBranch);
-    }, [isQLRRManager, branch, user?.branch]);
+    }, [isTHManager, branch, user?.branch]);
 
     useEffect(() => {
-        if (!isQLRRManager) return;
+        if (!isTHManager) return;
         const branchForOptions = targetBranch || branch || user?.branch || "hs";
         const options = departmentOptionsByBranch[branchForOptions] || [];
         setTargetDepartment((prev) =>
             prev && options.some((item) => item.value === prev) ? prev : ""
         );
-    }, [isQLRRManager, targetBranch, branch, user?.branch]);
+    }, [isTHManager, targetBranch, branch, user?.branch]);
     const handleRefresh = useCallback(async () => {
         setRefreshing(true);
         setError("");
@@ -181,26 +181,26 @@ export default function DashboardPage() {
     const selectableDepartments = useMemo(() => {
         const branchId = targetBranch || branch || user?.branch || "hs";
         let list = departmentOptionsByBranch[branchId] || [];
-        if (
-            isQLRRManager &&
-            normalizedDepartment &&
-            (branchId === (branch || user?.branch || "hs"))
-        ) {
-            list = list.filter((item) => item.value !== normalizedDepartment);
-        }
+        // if (
+        //     isTHManager &&
+        //     normalizedDepartment &&
+        //     (branchId === (branch || user?.branch || "hs"))
+        // ) {
+        //     list = list.filter((item) => item.value !== normalizedDepartment);
+        // }
         return list;
-    }, [targetBranch, branch, user?.branch, isQLRRManager, normalizedDepartment]);
+    }, [targetBranch, branch, user?.branch, isTHManager, normalizedDepartment]);
     const handleExportSummary = useCallback(async () => {
-        if (isQLRRManager && !targetDepartment) {
+        if (isTHManager && !targetDepartment) {
             message.warning("Vui lòng chọn phòng ban muốn xuất");
             return;
         }
         setExporting(true);
         try {
-            const effectiveBranch = isQLRRManager
+            const effectiveBranch = isTHManager
                 ? targetBranch || branch || user?.branch || ""
                 : branch;
-            const effectiveDepartment = isQLRRManager
+            const effectiveDepartment = isTHManager
                 ? targetDepartment
                 : department;
             const res = await api.get("/exports/department-summary", {
@@ -242,7 +242,7 @@ export default function DashboardPage() {
     }, [
         branch,
         department,
-        isQLRRManager,
+        isTHManager,
         targetBranch,
         targetDepartment,
         user?.branch,
@@ -479,30 +479,6 @@ export default function DashboardPage() {
                         size="large"
                         style={{ width: "100%" }}
                     >
-                        {/* <Card>
-                            <Space
-                                direction="vertical"
-                                size={4}
-                                style={{ width: "100%" }}
-                            >
-                                <Space size={24} wrap>
-                                    <div>
-                                        <Text type="secondary">Chi nhánh:</Text>{" "}
-                                        <Text strong>{branch || "-"}</Text>
-                                    </div>
-                                    <div>
-                                        <Text type="secondary">Phòng ban:</Text>{" "}
-                                        <Text strong>{department || "-"}</Text>
-                                    </div>
-                                    <div>
-                                        <Text type="secondary">
-                                            Số lượt nộp:
-                                        </Text>{" "}
-                                        <Text strong>{submissions.length}</Text>
-                                    </div>
-                                </Space>
-                            </Space>
-                        </Card> */}
                         <Card
                             title="Danh sách nhân viên đã nộp form"
                             extra={
@@ -521,8 +497,8 @@ export default function DashboardPage() {
                                         loading={exporting}
                                         disabled={
                                             loading ||
-                                            (!isQLRRManager && !submissions.length) ||
-                                            (isQLRRManager && !targetDepartment)
+                                            (!isTHManager && !submissions.length) ||
+                                            (isTHManager && !targetDepartment)
                                         }
                                     >
                                         Xuất tổng kết xếp loại
@@ -530,7 +506,7 @@ export default function DashboardPage() {
                                 </Space>
                             }
                         >
-                            {isQLRRManager && (
+                            {isTHManager && (
                                 <Space
                                     wrap
                                     style={{ marginBottom: 16, width: "100%" }}
