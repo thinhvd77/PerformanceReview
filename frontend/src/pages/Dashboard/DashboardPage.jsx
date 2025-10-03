@@ -80,13 +80,18 @@ const getBranchLabel = (branchId) => branchLabelMap[branchId] || branchId || "";
 const getDepartmentLabel = (branchId, departmentId) => {
     if (!departmentId) return "";
     const list = departmentOptionsByBranch[branchId] || [];
-    return list.find((item) => item.value === departmentId)?.label || departmentId;
+    return (
+        list.find((item) => item.value === departmentId)?.label || departmentId
+    );
 };
 export default function DashboardPage() {
     const { user } = useAuth();
     const normalizedRole = (user?.role || "").toString().toLowerCase();
-    const normalizedDepartment = (user?.department || "").toString().toLowerCase();
-    const isTHManager = normalizedRole === "manager" && normalizedDepartment === "th";
+    const normalizedDepartment = (user?.department || "")
+        .toString()
+        .toLowerCase();
+    const isTHManager =
+        normalizedRole === "manager" && normalizedDepartment === "th";
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState("");
@@ -111,7 +116,49 @@ export default function DashboardPage() {
             return null;
         });
     }, []);
+
+    // Load submissions dựa trên phòng ban được chọn (dành cho isTHManager)
+    const loadSubmissionsByDepartment = useCallback(
+        async (branchId, departmentId) => {
+            if (!branchId || !departmentId) {
+                setSubmissions([]);
+                return;
+            }
+
+            setLoading(true);
+            setError("");
+            try {
+                const { data } = await api.get(
+                    "/exports/department-submissions",
+                    {
+                        params: {
+                            branch: branchId,
+                            department: departmentId,
+                        },
+                    }
+                );
+                applyResponse(data);
+            } catch (e) {
+                const msg =
+                    e?.response?.data?.message ||
+                    e.message ||
+                    "Không thể tải dữ liệu";
+                setError(msg);
+                setSubmissions([]);
+                setSelectedId(null);
+            } finally {
+                setLoading(false);
+            }
+        },
+        [applyResponse]
+    );
     useEffect(() => {
+        // Trưởng phòng tổng hợp không tự động load dữ liệu
+        if (isTHManager) {
+            setLoading(false);
+            return;
+        }
+
         let cancelled = false;
         const load = async () => {
             setLoading(true);
@@ -141,7 +188,7 @@ export default function DashboardPage() {
         return () => {
             cancelled = true;
         };
-    }, [applyResponse]);
+    }, [applyResponse, isTHManager]);
 
     useEffect(() => {
         if (!isTHManager) return;
@@ -157,7 +204,30 @@ export default function DashboardPage() {
             prev && options.some((item) => item.value === prev) ? prev : ""
         );
     }, [isTHManager, targetBranch, branch, user?.branch]);
+
+    // Load submissions khi trưởng phòng tổng hợp chọn phòng ban
+    useEffect(() => {
+        if (!isTHManager || !targetBranch || !targetDepartment) return;
+
+        loadSubmissionsByDepartment(targetBranch, targetDepartment);
+    }, [
+        isTHManager,
+        targetBranch,
+        targetDepartment,
+        loadSubmissionsByDepartment,
+    ]);
     const handleRefresh = useCallback(async () => {
+        if (isTHManager) {
+            // Trưởng phòng tổng hợp: reload dựa trên phòng ban đã chọn
+            if (targetBranch && targetDepartment) {
+                await loadSubmissionsByDepartment(
+                    targetBranch,
+                    targetDepartment
+                );
+            }
+            return;
+        }
+
         setRefreshing(true);
         setError("");
         try {
@@ -176,7 +246,13 @@ export default function DashboardPage() {
         } finally {
             setRefreshing(false);
         }
-    }, [applyResponse]);
+    }, [
+        applyResponse,
+        isTHManager,
+        targetBranch,
+        targetDepartment,
+        loadSubmissionsByDepartment,
+    ]);
 
     const selectableDepartments = useMemo(() => {
         const branchId = targetBranch || branch || user?.branch || "hs";
@@ -207,7 +283,9 @@ export default function DashboardPage() {
                 responseType: "blob",
                 params: {
                     ...(effectiveBranch ? { branch: effectiveBranch } : {}),
-                    ...(effectiveDepartment ? { department: effectiveDepartment } : {}),
+                    ...(effectiveDepartment
+                        ? { department: effectiveDepartment }
+                        : {}),
                 },
             });
             const blob = new Blob([res.data], {
@@ -221,13 +299,13 @@ export default function DashboardPage() {
                     .replace(/[^a-zA-Z0-9-_]+/g, "_") || "tong_hop";
             const stamp = new Date().toISOString().slice(0, 10);
             const branchLabel = getBranchLabel(effectiveBranch) || branch;
-            const departmentLabel = getDepartmentLabel(
-                effectiveBranch,
-                effectiveDepartment
-            ) || effectiveDepartment || department;
-            const fileName = `Tong_ket_xep_loai_${sanitize(branchLabel)}_${sanitize(
-                departmentLabel
-            )}_${stamp}.xlsx`;
+            const departmentLabel =
+                getDepartmentLabel(effectiveBranch, effectiveDepartment) ||
+                effectiveDepartment ||
+                department;
+            const fileName = `Tong_ket_xep_loai_${sanitize(
+                branchLabel
+            )}_${sanitize(departmentLabel)}_${stamp}.xlsx`;
             saveAs(blob, fileName);
             message.success("Đã tải file tổng kết");
         } catch (e) {
@@ -346,9 +424,7 @@ export default function DashboardPage() {
                 console.warn("Download excel failed", err);
                 if (cancelled) return;
                 setParsedTable(null);
-                setParseError(
-                    "Không tải được file, hiển thị dữ liệu đã lưu"
-                );
+                setParseError("Không tải được file, hiển thị dữ liệu đã lưu");
             } finally {
                 if (!cancelled) setParsing(false);
             }
@@ -360,7 +436,11 @@ export default function DashboardPage() {
     }, [isModalVisible, selectedSubmission?.id]);
 
     const tableToRender = useMemo(() => {
-        if (parsedTable && parsedTable.columns?.length && parsedTable.rows?.length)
+        if (
+            parsedTable &&
+            parsedTable.columns?.length &&
+            parsedTable.rows?.length
+        )
             return parsedTable;
         const fallback = selectedSubmission?.table;
         if (fallback && fallback.columns?.length && fallback.rows?.length)
@@ -393,7 +473,12 @@ export default function DashboardPage() {
             );
         }
         if (!submissions.length) {
-            return <Empty description="Chưa có nhân viên nào nộp form" />;
+            const emptyMessage = isTHManager
+                ? targetDepartment
+                    ? "Chưa có nhân viên nào nộp form trong phòng ban này"
+                    : "Vui lòng chọn phòng ban để xem danh sách form đã nộp"
+                : "Chưa có nhân viên nào nộp form";
+            return <Empty description={emptyMessage} />;
         }
         return (
             <Table
@@ -403,7 +488,12 @@ export default function DashboardPage() {
                 pagination={false}
                 onRow={(record) => ({
                     onClick: () => setSelectedId(record.id),
-                    style: { cursor: "pointer", boxSizing: "border-box", lineHeight: 1, padding: 0},
+                    style: {
+                        cursor: "pointer",
+                        boxSizing: "border-box",
+                        lineHeight: 1,
+                        padding: 0,
+                    },
                 })}
                 rowClassName={(record) =>
                     record.id === selectedId ? "ant-table-row-selected" : ""
@@ -497,7 +587,8 @@ export default function DashboardPage() {
                                         loading={exporting}
                                         disabled={
                                             loading ||
-                                            (!isTHManager && !submissions.length) ||
+                                            (!isTHManager &&
+                                                !submissions.length) ||
                                             (isTHManager && !targetDepartment)
                                         }
                                     >
@@ -518,6 +609,7 @@ export default function DashboardPage() {
                                         onChange={(value) => {
                                             setTargetBranch(value);
                                             setTargetDepartment("");
+                                            setSubmissions([]); // Clear khi đổi chi nhánh
                                         }}
                                     >
                                         {branchOptions.map((option) => (
@@ -530,11 +622,16 @@ export default function DashboardPage() {
                                         ))}
                                     </Select>
                                     <Select
-                                        allowClear
                                         style={{ minWidth: 260 }}
-                                        placeholder="Chọn phòng ban cần xuất"
+                                        placeholder="Chọn phòng ban để xem form đã nộp"
                                         value={targetDepartment || undefined}
-                                        onChange={(value) => setTargetDepartment(value || "")}
+                                        onChange={(value) => {
+                                            setTargetDepartment(value || "");
+                                            if (!value) {
+                                                setSubmissions([]); // Clear khi bỏ chọn
+                                            }
+                                        }}
+                                        allowClear
                                     >
                                         {selectableDepartments.map((option) => (
                                             <Select.Option

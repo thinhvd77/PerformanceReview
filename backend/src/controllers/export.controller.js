@@ -1,13 +1,13 @@
 import fs from 'fs';
 import path from 'path';
 import ExcelJS from 'exceljs';
-import {AppDataSource} from '../config/database.js';
-import {ExportRecord} from '../entities/ExportRecord.js';
-import {User} from '../entities/User.js';
-import {orgData, findNameById} from '../utils/orgData.js';
+import { AppDataSource } from '../config/database.js';
+import { ExportRecord } from '../entities/ExportRecord.js';
+import { User } from '../entities/User.js';
+import { orgData, findNameById } from '../utils/orgData.js';
 
 const ensureDir = (dir) => {
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, {recursive: true});
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 };
 
 const EXPORT_DIR = path.join(process.cwd(), 'uploads', 'exports');
@@ -136,7 +136,7 @@ const getManagerContext = async (req, options = {}) => {
     }
 
     const userRepo = AppDataSource.getRepository(User);
-    const manager = await userRepo.findOne({where: {username}});
+    const manager = await userRepo.findOne({ where: { username } });
     if (!manager) {
         const err = new Error('User not found');
         err.status = 404;
@@ -163,7 +163,8 @@ const getManagerContext = async (req, options = {}) => {
 
     const normalizedDepartment = (department || '').toLowerCase();
 
-    if (allowDepartmentOverride && normalizedDepartment === 'qlrr') {
+    // Allow override for specific manager departments (QLRR and TH managers)
+    if (allowDepartmentOverride && (normalizedDepartment === 'qlrr' || normalizedDepartment === 'th')) {
         const rawBranch = (req.query?.targetBranch ?? req.query?.branch ?? '').toString().trim();
         const rawDepartment = (req.query?.targetDepartment ?? req.query?.department ?? '').toString().trim();
 
@@ -200,8 +201,8 @@ const getLatestRecordsForDepartment = async (branch, department) => {
     const records = await exportRepo
         .createQueryBuilder('record')
         .leftJoinAndSelect('record.employee', 'employee')
-        .where('employee.branch = :branch', {branch})
-        .andWhere('employee.department = :department', {department})
+        .where('employee.branch = :branch', { branch })
+        .andWhere('employee.department = :department', { department })
         .orderBy('record.createdAt', 'DESC')
         .getMany();
 
@@ -261,7 +262,7 @@ const extractSummaryFromTable = (table) => {
 
 const extractSummaryFromFile = async (filePath) => {
     console.log(filePath);
-    
+
     if (!filePath || !fs.existsSync(filePath)) return null;
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.readFile(filePath);
@@ -296,11 +297,11 @@ const extractSummaryFromFile = async (filePath) => {
         const row = ws.getRow(r);
         const label = norm(getCellText(row.getCell(2)));
         console.log(label);
-        
+
         if (!label) continue;
-        if (label.includes('he so hoan thanh cong viec') || label.includes('he so hoan thanh')) {
+        if (label.includes('he so hoan thanh cong viec cua ca nhan sau khi') || label.includes('he so hoan thanh con viec')) {
             console.log('Found ratio at row', r);
-            
+
             const cell = row.getCell(scoreColExcel);
             ratioText = getCellText(cell).trim();
             const rawValue = cell?.value;
@@ -347,8 +348,8 @@ const extractSummaryFromFile = async (filePath) => {
         const clean = raw.replace(/\.+$/g, '').trim();
         if (clean.toLocaleLowerCase().includes('trưởng phòng')) return 'TP';
         if (clean.toLocaleLowerCase().includes('phó phòng') || clean.toLocaleLowerCase().includes('phó trưởng phòng')) return 'PP';
-        if (clean.toLocaleLowerCase().includes('giám đốc')) return 'GĐ';
         if (clean.toLocaleLowerCase().includes('phó giám đốc')) return 'PGĐ';
+        if (clean.toLocaleLowerCase().includes('giám đốc')) return 'GĐ';
         if (clean.toLocaleLowerCase().includes('nhân viên') || clean.toLocaleLowerCase().includes('cán bộ')) return 'NV';
         return clean;
     };
@@ -437,7 +438,7 @@ const getRecordSummary = async (record) => {
             const absPath = path.join(process.cwd(), record.filePath);
             summary = await extractSummaryFromFile(absPath);
             console.log(summary);
-            
+
         }
     } catch (err) {
         console.warn('Failed to parse export file for summary:', record?.id, err?.message || err);
@@ -470,7 +471,7 @@ export const listExports = async (req, res) => {
 
         if (q) {
             // match by fileName or meta->employee_name (if driver supports jsonb path, use LIKE on stringified JSON as fallback)
-            qb.where("LOWER(e.fileName) LIKE :q", {q: `%${q}%`});
+            qb.where("LOWER(e.fileName) LIKE :q", { q: `%${q}%` });
         }
 
         const [entities, total] = await qb.getManyAndCount();
@@ -493,9 +494,9 @@ export const listExports = async (req, res) => {
             };
         });
 
-        res.json({data, total, page, pageSize});
+        res.json({ data, total, page, pageSize });
     } catch (err) {
-        res.status(500).json({message: 'Failed to list exports'});
+        res.status(500).json({ message: 'Failed to list exports' });
     }
 };
 
@@ -503,10 +504,10 @@ export const createExport = async (req, res) => {
     try {
         // multer provides file (single) and body for fields
         const file = req.file; // required
-        if (!file) return res.status(400).json({message: 'No file uploaded'});
+        if (!file) return res.status(400).json({ message: 'No file uploaded' });
 
         const employee_code = req.user?.username;
-        const {formId, fileName, table} = req.body || {};
+        const { formId, fileName, table } = req.body || {};
 
         // Move file to exports subdir (it is currently in uploads root by multer config)
         const originalPath = path.join(process.cwd(), 'uploads', file.filename);
@@ -518,6 +519,33 @@ export const createExport = async (req, res) => {
 
         const repo = AppDataSource.getRepository(ExportRecord.options.name);
 
+        // Check if user already has an existing form submission
+        // Implement one-user-one-form logic: delete existing submission before creating new one
+        const existingRecord = await repo.findOne({
+            where: { employee_code: employee_code },
+            order: { createdAt: 'DESC' }
+        });
+
+        if (existingRecord) {
+            // Delete the old file if it exists
+            if (existingRecord.filePath) {
+                const oldFilePath = path.join(process.cwd(), existingRecord.filePath);
+                try {
+                    await fs.promises.unlink(oldFilePath);
+                    console.log(`Deleted old file: ${oldFilePath}`);
+                } catch (fileErr) {
+                    if (fileErr.code !== 'ENOENT') {
+                        console.warn(`Failed to remove old export file ${oldFilePath}:`, fileErr);
+                    }
+                }
+            }
+
+            // Remove the old record from database
+            await repo.remove(existingRecord);
+            console.log(`Removed existing export record for user: ${employee_code}`);
+        }
+
+        // Create new export record
         const entity = repo.create({
             employee_code: employee_code,
             formId: formId ? parseInt(formId, 10) : null,
@@ -527,44 +555,72 @@ export const createExport = async (req, res) => {
         });
         const saved = await repo.save(entity);
 
+        const message = existingRecord
+            ? 'Form đã được cập nhật thành công (thay thế form cũ)'
+            : 'Form đã được lưu thành công';
+
         res.status(201).json({
             id: saved.id,
-            message: 'Export saved',
+            message: message,
             downloadUrl: `/api/exports/${saved.id}/download`,
+            replaced: !!existingRecord
         });
     } catch (err) {
         console.error('createExport error:', err);
-        res.status(500).json({message: 'Failed to save export'});
+        res.status(500).json({ message: 'Failed to save export' });
     }
 };
 
 export const listDepartmentSubmissions = async (req, res) => {
     try {
-        const { branch, department } = await getManagerContext(req);
-        const records = await getLatestRecordsForDepartment(branch, department);
+        // Cho phép trưởng phòng tổng hợp override branch/department qua query params
+        const { manager, branch: userBranch, department: userDepartment } = await getManagerContext(req);
+        let effectiveBranch = userBranch;
+        let effectiveDepartment = userDepartment;
 
-        const submissions = records.map((record) => {
-            const submittedDate = toDate(record.createdAt);
-            return {
-                id: record.id,
-                employeeCode: record.employee_code || record.employee?.username || '',
-                employeeName: record.employee?.fullname || record.employee_code || '',
-                submittedAt: submittedDate ? submittedDate.toISOString() : (record.createdAt || ''),
-                formId: record.formId,
-                fileName: record.fileName,
-                table: record.table,
-            };
-        });
+        // Chỉ cho phép trưởng phòng tổng hợp override
+        const normalizedDepartment = (userDepartment || '').toLowerCase();
+        const isTHManager = normalizedDepartment === 'th';
+        console.log(isTHManager);
+
+
+        if (isTHManager) {
+            const queryBranch = (req.query?.branch || '').toString().trim();
+            console.log(queryBranch);
+
+            const queryDepartment = (req.query?.department || '').toString().trim();
+            console.log(queryDepartment);
+
+            if (queryBranch) {
+                effectiveBranch = queryBranch;
+            }
+
+            if (queryDepartment) {
+                effectiveDepartment = queryDepartment;
+            }
+        }
+        console.log(effectiveDepartment);
+
+        const records = await getLatestRecordsForDepartment(effectiveBranch, effectiveDepartment);
+
+        const submissions = records.map((record) => ({
+            id: record.id,
+            employeeCode: record.employee_code,
+            employeeName: record.employee?.fullname || null,
+            submittedAt: formatDateTimeVN(toDate(record.createdAt)),
+            fileName: record.fileName,
+            table: record.table,
+        }));
 
         return res.json({
-            branch,
-            department,
+            branch: effectiveBranch,
+            department: effectiveDepartment,
             submissions,
         });
     } catch (err) {
         const status = err.status || 500;
         if (!err.status) {
-            console.error('Error fetching department submissions:', err);
+            console.error('listDepartmentSubmissions error:', err);
         }
         const payload = {
             message: err.status ? err.message : 'Failed to fetch department submissions',
@@ -580,7 +636,7 @@ export const exportDepartmentSummary = async (req, res) => {
         const records = await getLatestRecordsForDepartment(branch, department);
 
         if (!records.length) {
-            return res.status(400).json({message: 'Không có dữ liệu để xuất'});
+            return res.status(400).json({ message: 'Không có dữ liệu để xuất' });
         }
 
         const branchName = mapBranchName(branch);
@@ -641,7 +697,7 @@ export const exportDepartmentSummary = async (req, res) => {
         ws.getCell('A3').alignment = { horizontal: 'center' };
 
         ws.mergeCells('A4:B4');
-        ws.getCell('A4').value = shortDeptNameMapHead[departmentName].toUpperCase() || departmentName.toUpperCase();
+        ws.getCell('A4').value = shortDeptNameMapHead[departmentName]?.toUpperCase() || departmentName?.toUpperCase() || '';
         ws.getCell('A4').font = { name: 'Times New Roman', size: 12, bold: true };
         ws.getCell('A4').alignment = { horizontal: 'center' };
 
@@ -704,14 +760,14 @@ export const exportDepartmentSummary = async (req, res) => {
         ws.getCell('A12').alignment = { horizontal: 'left' };
         ws.addRow([]);
 
-        
+
         ws.columns = [
-            {key: 'stt', width: 6, font: {bold: true}},
-            {key: 'employeeName', width: 37, font: {bold: true}},
-            {key: 'department', width: 14, font: {bold: true}},
-            {key: 'position', width: 10, font: {bold: true}},
-            {key: 'ratio', width: 27, font: {bold: true}},
-            {key: 'classification', width: 10, font: {bold: true}},
+            { key: 'stt', width: 6, font: { bold: true } },
+            { key: 'employeeName', width: 37, font: { bold: true } },
+            { key: 'department', width: 14, font: { bold: true } },
+            { key: 'position', width: 10, font: { bold: true } },
+            { key: 'ratio', width: 27, font: { bold: true } },
+            { key: 'classification', width: 10, font: { bold: true } },
         ];
 
         const headerRow = ws.addRow({
@@ -727,14 +783,14 @@ export const exportDepartmentSummary = async (req, res) => {
         // headerRow.height = 30;
         headerRow.eachCell((cell) => {
             cell.border = {
-                top: {style: 'thin'},
-                left: {style: 'thin'},
-                bottom: {style: 'thin'},
-                right: {style: 'thin'}
+                top: { style: 'thin' },
+                left: { style: 'thin' },
+                bottom: { style: 'thin' },
+                right: { style: 'thin' }
             };
         });
 
-        summaries.forEach(({record, summary}, index) => {
+        summaries.forEach(({ record, summary }, index) => {
             const submittedDate = toDate(record.createdAt);
             const ratioValue = (summary?.ratio !== null && summary?.ratio !== undefined && Number.isFinite(summary?.ratio))
                 ? Number(summary.ratio)
@@ -754,10 +810,10 @@ export const exportDepartmentSummary = async (req, res) => {
             // row.height = 20;
             row.eachCell((cell) => {
                 cell.border = {
-                    top: {style: 'thin'},
-                    left: {style: 'thin'},
-                    bottom: {style: 'thin'},
-                    right: {style: 'thin'}
+                    top: { style: 'thin' },
+                    left: { style: 'thin' },
+                    bottom: { style: 'thin' },
+                    right: { style: 'thin' }
                 };
                 cell.alignment = { vertical: 'middle', wrapText: true };
             });
@@ -765,11 +821,11 @@ export const exportDepartmentSummary = async (req, res) => {
             if (ratioValue !== null) {
                 row.getCell('ratio').value = ratioValue;
                 row.getCell('ratio').numFmt = '0.00';
-                row.getCell('ratio').alignment = {horizontal: 'center', vertical: 'middle' };
+                row.getCell('ratio').alignment = { horizontal: 'center', vertical: 'middle' };
             }
-            row.getCell('position').alignment = {horizontal: 'center', vertical: 'middle' };
-            row.getCell('classification').alignment = {horizontal: 'center', vertical: 'middle' };
-            row.getCell('stt').alignment = {horizontal: 'center', vertical: 'middle'};
+            row.getCell('position').alignment = { horizontal: 'center', vertical: 'middle' };
+            row.getCell('classification').alignment = { horizontal: 'center', vertical: 'middle' };
+            row.getCell('stt').alignment = { horizontal: 'center', vertical: 'middle' };
         });
 
         ws.addRow([]);
@@ -815,11 +871,11 @@ export const getExport = async (req, res) => {
     try {
         const id = parseInt(req.params.id, 10);
         const repo = AppDataSource.getRepository(ExportRecord.options.name);
-        const entity = await repo.findOne({where: {id}});
-        if (!entity) return res.status(404).json({message: 'Not found'});
+        const entity = await repo.findOne({ where: { id } });
+        if (!entity) return res.status(404).json({ message: 'Not found' });
         res.json(entity);
     } catch (err) {
-        res.status(500).json({message: 'Failed to get export'});
+        res.status(500).json({ message: 'Failed to get export' });
     }
 };
 
@@ -827,13 +883,13 @@ export const downloadExport = async (req, res) => {
     try {
         const id = parseInt(req.params.id, 10);
         const repo = AppDataSource.getRepository(ExportRecord.options.name);
-        const entity = await repo.findOne({where: {id}});
-        if (!entity) return res.status(404).json({message: 'Not found'});
+        const entity = await repo.findOne({ where: { id } });
+        if (!entity) return res.status(404).json({ message: 'Not found' });
         const absPath = path.join(process.cwd(), entity.filePath);
-        if (!fs.existsSync(absPath)) return res.status(404).json({message: 'File missing'});
+        if (!fs.existsSync(absPath)) return res.status(404).json({ message: 'File missing' });
         res.download(absPath, entity.fileName || path.basename(absPath));
     } catch (err) {
-        res.status(500).json({message: 'Failed to download export'});
+        res.status(500).json({ message: 'Failed to download export' });
     }
 };
 
@@ -841,13 +897,13 @@ export const deleteExport = async (req, res) => {
     try {
         const id = parseInt(req.params.id, 10);
         if (!Number.isFinite(id)) {
-            return res.status(400).json({message: 'Invalid export id'});
+            return res.status(400).json({ message: 'Invalid export id' });
         }
 
         const repo = AppDataSource.getRepository(ExportRecord.options.name);
-        const record = await repo.findOne({where: {id}});
+        const record = await repo.findOne({ where: { id } });
         if (!record) {
-            return res.status(404).json({message: 'Export record not found'});
+            return res.status(404).json({ message: 'Export record not found' });
         }
 
         if (record.filePath) {
@@ -863,9 +919,9 @@ export const deleteExport = async (req, res) => {
 
         await repo.remove(record);
 
-        return res.json({message: 'Export record deleted'});
+        return res.json({ message: 'Export record deleted' });
     } catch (err) {
         console.error('deleteExport error:', err);
-        return res.status(500).json({message: 'Failed to delete export'});
+        return res.status(500).json({ message: 'Failed to delete export' });
     }
 };
