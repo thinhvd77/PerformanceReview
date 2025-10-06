@@ -254,7 +254,7 @@ export default async function exportFormExcel({
         ws.getCell('F3').value = 'Độc lập - Tự do - Hạnh phúc';
         ws.getCell('F3').alignment = { horizontal: 'center' };
         ws.getCell('F3').font = { name: 'Times New Roman', size: 11, bold: true, underline: true };
-    } 
+    }
     else {
         // ===== HEADER =====
         safeMergeCells(ws, 'A2:C2');
@@ -304,7 +304,7 @@ export default async function exportFormExcel({
     ws.getCell('A6').alignment = { horizontal: 'center' };
 
     let quarter = 'I';
-    const month = new Date().getMonth() + 1;
+    const month = new Date().getMonth();
     if (month >= 4 && month <= 6) quarter = 'II';
     else if (month >= 7 && month <= 9) quarter = 'III';
     else if (month >= 10 && month <= 12) quarter = 'IV';

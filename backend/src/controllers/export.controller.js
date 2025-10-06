@@ -13,6 +13,48 @@ const ensureDir = (dir) => {
 const EXPORT_DIR = path.join(process.cwd(), 'uploads', 'exports');
 ensureDir(EXPORT_DIR);
 
+// Helper function to get current quarter and year
+const getCurrentQuarterYear = () => {
+    const now = new Date();
+    const month = now.getMonth(); // getMonth() returns 0-11
+    let quarter = 1;
+    if (month >= 4 && month <= 6) quarter = 2;
+    else if (month >= 7 && month <= 9) quarter = 3;
+    else if (month >= 10 && month <= 12) quarter = 4;
+
+    return {
+        quarter,
+        year: now.getFullYear()
+    };
+};
+
+// Helper function to create organized directory structure
+const createExportDirectory = (year, quarter) => {
+    const yearDir = path.join(EXPORT_DIR, year.toString());
+    const quarterDir = path.join(yearDir, `Q${quarter}`);
+
+    ensureDir(yearDir);
+    ensureDir(quarterDir);
+
+    return quarterDir;
+};
+
+// Helper function to generate clean filename with employee info
+const generateExportFileName = (originalFileName, employeeCode, employeeName) => {
+    // Extract file extension
+    const ext = path.extname(originalFileName) || '.xlsx';
+
+    // Create clean employee identifier
+    const cleanEmployeeName = employeeName
+        ? employeeName.replace(/[^a-zA-Z0-9_\-]/g, '_').replace(/_+/g, '_')
+        : employeeCode;
+
+    // Generate timestamp
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/[T:]/g, '_');
+
+    return `${employeeCode}_${cleanEmployeeName}_${timestamp}${ext}`;
+};
+
 const norm = (s) => String(s || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -509,20 +551,39 @@ export const createExport = async (req, res) => {
         const employee_code = req.user?.username;
         const { formId, fileName, table } = req.body || {};
 
-        // Move file to exports subdir (it is currently in uploads root by multer config)
+        // Get current quarter and year for form submission
+        const { quarter, year } = getCurrentQuarterYear();
+
+        // Fetch employee information for filename generation
+        const userRepo = AppDataSource.getRepository(User.options.name);
+        const employee = await userRepo.findOne({ where: { username: employee_code } });
+        const employeeName = employee?.fullname || employee_code;
+
+        // Create organized directory structure
+        const quarterDir = createExportDirectory(year, quarter);
+
+        // Generate clean filename with employee info
+        const originalFileName = fileName && typeof fileName === 'string' ? fileName : (file.originalname || file.filename);
+        const organizedFileName = generateExportFileName(originalFileName, employee_code, employeeName);
+
+        // Move file from uploads root to organized directory structure
         const originalPath = path.join(process.cwd(), 'uploads', file.filename);
-        const safeName = fileName && typeof fileName === 'string' ? fileName : (file.originalname || file.filename);
-        const finalPath = path.join(EXPORT_DIR, file.filename);
+        const finalPath = path.join(quarterDir, organizedFileName);
+
         if (originalPath !== finalPath) {
             fs.renameSync(originalPath, finalPath);
         }
 
         const repo = AppDataSource.getRepository(ExportRecord.options.name);
 
-        // Check if user already has an existing form submission
-        // Implement one-user-one-form logic: delete existing submission before creating new one
+        // Check if user already has form submission for current quarter-year
+        // Implement quarter-year based storage: delete existing submission for same quarter-year before creating new one
         const existingRecord = await repo.findOne({
-            where: { employee_code: employee_code },
+            where: {
+                employee_code: employee_code,
+                quarter: quarter,
+                year: year
+            },
             order: { createdAt: 'DESC' }
         });
 
@@ -542,22 +603,24 @@ export const createExport = async (req, res) => {
 
             // Remove the old record from database
             await repo.remove(existingRecord);
-            console.log(`Removed existing export record for user: ${employee_code}`);
+            console.log(`Removed existing export record for user: ${employee_code} (Q${quarter} ${year})`);
         }
 
-        // Create new export record
+        // Create new export record with quarter and year
         const entity = repo.create({
             employee_code: employee_code,
             formId: formId ? parseInt(formId, 10) : null,
-            fileName: safeName,
+            fileName: organizedFileName,
             filePath: path.relative(process.cwd(), finalPath).replace(/\\/g, '/'),
             table: table ? (typeof table === 'string' ? JSON.parse(table) : table) : null,
+            quarter: quarter,
+            year: year,
         });
         const saved = await repo.save(entity);
 
         const message = existingRecord
-            ? 'Form đã được cập nhật thành công (thay thế form cũ)'
-            : 'Form đã được lưu thành công';
+            ? `Form đã được cập nhật thành công (thay thế form Quý ${quarter} năm ${year})`
+            : `Form Quý ${quarter} năm ${year} đã được lưu thành công`;
 
         res.status(201).json({
             id: saved.id,
