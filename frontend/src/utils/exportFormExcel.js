@@ -245,15 +245,15 @@ export default async function exportFormExcel({
             ws.getCell('A5').alignment = { horizontal: 'center' };
         }
 
-        safeMergeCells(ws, 'F2:G2');
-        ws.getCell('F2').value = 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM';
-        ws.getCell('F2').alignment = { horizontal: 'center' };
-        ws.getCell('F2').font = { name: 'Times New Roman', bold: true, size: 11 };
+        safeMergeCells(ws, 'E2:G2');
+        ws.getCell('E2').value = 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM';
+        ws.getCell('E2').alignment = { horizontal: 'center' };
+        ws.getCell('E2').font = { name: 'Times New Roman', bold: true, size: 11 };
 
-        safeMergeCells(ws, 'F3:G3');
-        ws.getCell('F3').value = 'Độc lập - Tự do - Hạnh phúc';
-        ws.getCell('F3').alignment = { horizontal: 'center' };
-        ws.getCell('F3').font = { name: 'Times New Roman', size: 11, bold: true, underline: true };
+        safeMergeCells(ws, 'E3:G3');
+        ws.getCell('E3').value = 'Độc lập - Tự do - Hạnh phúc';
+        ws.getCell('E3').alignment = { horizontal: 'center' };
+        ws.getCell('E3').font = { name: 'Times New Roman', size: 11, bold: true, underline: true };
     }
     else {
         // ===== HEADER =====
@@ -298,10 +298,10 @@ export default async function exportFormExcel({
     ws.addRow([]);
 
     // ===== TIÊU ĐỀ =====
-    safeMergeCells(ws, `A6:${toCol(colCount)}6`);
-    ws.getCell('A6').value = title;
-    ws.getCell('A6').font = { name: 'Times New Roman', size: 11, bold: true };
-    ws.getCell('A6').alignment = { horizontal: 'center' };
+    safeMergeCells(ws, `A7:${toCol(colCount)}7`);
+    ws.getCell('A7').value = title;
+    ws.getCell('A7').font = { name: 'Times New Roman', size: 11, bold: true };
+    ws.getCell('A7').alignment = { horizontal: 'center' };
 
     let quarter = 'I';
     const month = new Date().getMonth();
@@ -309,35 +309,35 @@ export default async function exportFormExcel({
     else if (month >= 7 && month <= 9) quarter = 'III';
     else if (month >= 10 && month <= 12) quarter = 'IV';
 
-    safeMergeCells(ws, `A7:${toCol(colCount)}7`);
-    ws.getCell('A7').value = `Quý ${quarter} Năm ${new Date().getFullYear()}`;
-    ws.getCell('A7').font = { name: 'Times New Roman', size: 11, bold: true };
-    ws.getCell('A7').alignment = { horizontal: 'center' };
-
     safeMergeCells(ws, `A8:${toCol(colCount)}8`);
-    const cellA8 = ws.getCell('A8');
+    ws.getCell('A8').value = `Quý ${quarter} Năm ${new Date().getFullYear()}`;
+    ws.getCell('A8').font = { name: 'Times New Roman', size: 11, bold: true };
+    ws.getCell('A8').alignment = { horizontal: 'center' };
+
+    safeMergeCells(ws, `A9:${toCol(colCount)}9`);
+    const cellA9 = ws.getCell('A9');
     if (employee_name) {
-        cellA8.value = {
+        cellA9.value = {
             richText: [
                 { text: 'Họ và tên: ', font: { name: 'Times New Roman', size: 11 } },
                 { text: employee_name, font: { name: 'Times New Roman', size: 11, bold: true } },
             ],
         };
     } else {
-        cellA8.value = 'Họ và tên: .............................................';
-        cellA8.font = { name: 'Times New Roman', size: 11 };
+        cellA9.value = 'Họ và tên: .............................................';
+        cellA9.font = { name: 'Times New Roman', size: 11 };
     }
-    cellA8.alignment = { horizontal: 'left' };
+    cellA9.alignment = { horizontal: 'left' };
 
-    safeMergeCells(ws, `A9:${toCol(colCount)}9`);
-    ws.getCell('A9').value = `Chức vụ: ${role || '...................................................'}`;
-    ws.getCell('A9').font = { name: 'Times New Roman', size: 11 };
-    ws.getCell('A9').alignment = { horizontal: 'left' };
+    safeMergeCells(ws, `A10:${toCol(colCount)}10`);
+    ws.getCell('A10').value = `Chức vụ: ${role || '...................................................'}`;
+    ws.getCell('A10').font = { name: 'Times New Roman', size: 11 };
+    ws.getCell('A10').alignment = { horizontal: 'left' };
 
     ws.addRow([]);
 
     // ===== BẢNG =====
-    let startRow = 11;
+    let startRow = 12;
     const tableHeaderRow = startRow;
 
     // Header cột
