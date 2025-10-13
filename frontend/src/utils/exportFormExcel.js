@@ -461,6 +461,26 @@ export default async function exportFormExcel({
 
             excelCol += colSpan;
         }
+
+        // Kiểm tra cột STT (cột 1) để áp dụng định dạng đặc biệt cho toàn bộ hàng
+        const sttCell = ws.getCell(excelRow, 1);
+        const sttValue = sttCell.value;
+
+        // Nếu STT có giá trị khác null và '-', in đậm và tô nền xám toàn bộ hàng
+        if (sttValue !== null && sttValue !== undefined && sttValue !== '-' && String(sttValue).trim() !== '') {
+            for (let col = 1; col <= colCount; col++) {
+                const cell = ws.getCell(excelRow, col);
+                // Giữ nguyên font size và name, chỉ thêm bold
+                cell.font = { ...cell.font, bold: true };
+                // Áp dụng nền xám (màu D3D3D3 - light gray)
+                cell.fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFD3D3D3' }
+                };
+            }
+        }
+
         excelRow += 1;
     }
 

@@ -1,0 +1,18 @@
+export const policyData = {
+    "Vi phạm chủ trương, chính sách của Đảng, pháp luật của nhà nước, chế độ của ngành nhưng chưa dẫn đến mức phải thi hành kỷ luật.": "Trừ 05 điểm/lần vi phạm",
+    "Đến cơ quan trong tình trạng say rượu, bia, các chất kích thích hoặc say rượu, bia bỏ vị trí làm việc": "Trừ 03 điểm/lần vi phạm",
+    "Đồng phục không đúng quy định": "Trừ 01 điểm/lần vi phạm",
+    "Chơi cờ, bài, chơi trò chơi điện tử, nói chuyện phiếm gây ồn ào  trong giờ làm việc": "Trừ 03 điểm/lần vi phạm",
+    "Có hành vi thiếu văn hoá tại nơi làm việc (nói tục, chửi bậy, xúc phạm danh dự người khác, quấy rối tình dục nơi làm việc...) hoặc gây rối làm mất trật tự cơ quan, gây mất đoàn kết nội bộ, không giữ gìn vệ sinh chung làm ảnh hưởng đến hoạt động kinh doanh của đơn vị": "Trừ 05 điểm/lần vi phạm",
+    "Có tác phong, thái độ làm việc không đúng đắn thiếu tinh thần trách nhiệm, bị khách hàng phản ánh làm ảnh hưởng đến uy tín của đơn vị nhưng chưa đến mức gây thiệt hại cho khách hàng và ngân hàng": "Trừ 03 điểm/lần vi phạm",
+    "Chấp hành không nghiêm chỉnh, triệt để những quy định về an toàn lao động và vệ sinh lao động nơi làm việc.": "Trừ 02 điểm/lần vi phạm",
+    "Ý thức trách nhiệm kém trong việc bảo quản, giữ gìn tài sản chung của cơ quan và tài sản được cơ quan giao cho cá nhân sử dụng, quản lý dẫn đến hư hỏng, mất mát. Sử dụng tài sản của cơ quan, đơn vị phục vụ cho lợi ích cá nhân mình và cá nhân người khác.": "Trừ 02 điểm/lần vi phạm",
+    "Vi phạm quy định về bảo vệ, giữ gìn bí mật về hoạt động kinh doanh của đơn vị như: trong phát ngôn, cung cấp số liệu tài liệu chưa được cho phép, bất cẩn để lộ thông tin… nhưng chưa đến mức gây thiệt hại cho khách hàng và ngân hàng.": "Trừ 02 điểm/lần vi phạm",
+    "Thiếu tuân thủ các quy định về an toàn phòng chống cháy nổ, an toàn kho quỹ, quy trình vận hành máy móc, thiết bị kỹ thuật được trang bị dẫn đến gây hậu quả.": "Trừ 02 điểm/lần vi phạm",
+    "Có đơn thư tố cáo khiếu nại sau khi kiểm tra có kết luận là đúng.": "Trừ 05 điểm/lần vi phạm",
+    "Cán bộ bị KH phản ánh qua đường dây nóng hoặc hòm thư góp ý mà phản ánh đó được xác định có lỗi của cán bộ": "Trừ 03 điểm/lần vi phạm",
+    "Vi phạm các chuẩn mực khác về Văn hóa Agribank.": "Trừ 02 điểm/lần vi phạm",
+    "Thực hiện giờ công lao động: Đi muộn, về sớm mà không có lý do chính đáng.": "Trừ 0,5 điểm/lần vi phạm",
+    "Nghỉ không phép": "01 ngày trừ 03 điểm, 02 ngày trừ 05 điểm, từ 03 ngày trở lên do Hội đồng kỷ luật quyết định.",
+    "Các trường hợp khác quy định tại văn bản 429/NQLĐ-HĐTV-TCNS ngày 25/7/2022 về Nội quy lao động của Agribank hoặc các văn bản quy định khác theo từng thời kỳ (nếu có)": "Trừ 02 điểm/lần vi phạm",
+}

@@ -954,7 +954,7 @@ export default function FormViewer({ formId }) {
                 if (rule.threshold && rule.fixedPoints) {
                     const actualRatio = valid ? actualValue / planValue : 0;
                     return actualRatio >= rule.threshold
-                        ? `Đạt ${formatPercentVi(actualRatio - 1)} (≥110%)`
+                        ? `Đạt ${formatPercentVi(actualRatio)} (≥110%)`
                         : "";
                 } else {
                     return positiveRatio > 0

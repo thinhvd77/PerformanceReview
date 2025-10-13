@@ -1,14 +1,29 @@
-import React, {useEffect, useMemo, useRef, useState} from 'react';
-import {Card, Typography, Row, Col, Select, Button, Space, List, Tag, message, Empty, Spin, Layout} from 'antd';
-import {useNavigate} from 'react-router-dom';
-import api from '../../services/api';
-import {orgData, findNameById} from '../../data/orgData';
-import UserInfo from '../../components/UserInfo';
-import FormViewer from '../../components/FormViewer.jsx';
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import {
+    Card,
+    Typography,
+    Row,
+    Col,
+    Select,
+    Button,
+    Space,
+    List,
+    Tag,
+    message,
+    Empty,
+    Spin,
+    Layout,
+} from "antd";
+import { useNavigate } from "react-router-dom";
+import api from "../../services/api";
+import { orgData, findNameById } from "../../data/orgData";
+import UserInfo from "../../components/UserInfo";
+import FormViewer from "../../components/FormViewer.jsx";
+import FloatingGuide from "../../components/FloatingGuide.jsx";
 import logo from "../../assets/logo_png.png";
 
-const {Content, Header} = Layout;
-const {Title, Text} = Typography;
+const { Content, Header } = Layout;
+const { Title, Text } = Typography;
 
 export default function FormPage() {
     const [branchId, setBranchId] = useState();
@@ -22,18 +37,28 @@ export default function FormPage() {
     const deptRef = useRef(null);
     const posRef = useRef(null);
 
-    const departments = useMemo(() => (branchId ? orgData.departments[branchId] || [] : []), [branchId]);
-    const positions = useMemo(() => (departmentId ? orgData.positions[departmentId] || [] : []), [departmentId]);
+    const departments = useMemo(
+        () => (branchId ? orgData.departments[branchId] || [] : []),
+        [branchId]
+    );
+    const positions = useMemo(
+        () => (departmentId ? orgData.positions[departmentId] || [] : []),
+        [departmentId]
+    );
 
     // Persist selection
     useEffect(() => {
-        if (branchId) localStorage.setItem('ufp.branchId', branchId); else localStorage.removeItem('ufp.branchId');
+        if (branchId) localStorage.setItem("ufp.branchId", branchId);
+        else localStorage.removeItem("ufp.branchId");
     }, [branchId]);
     useEffect(() => {
-        if (departmentId) localStorage.setItem('ufp.departmentId', departmentId); else localStorage.removeItem('ufp.departmentId');
+        if (departmentId)
+            localStorage.setItem("ufp.departmentId", departmentId);
+        else localStorage.removeItem("ufp.departmentId");
     }, [departmentId]);
     useEffect(() => {
-        if (positionId) localStorage.setItem('ufp.positionId', positionId); else localStorage.removeItem('ufp.positionId');
+        if (positionId) localStorage.setItem("ufp.positionId", positionId);
+        else localStorage.removeItem("ufp.positionId");
     }, [positionId]);
 
     // Search forms for current selection
@@ -44,7 +69,9 @@ export default function FormPage() {
         setSelectedFormId(null);
         setResults([]);
         try {
-            const res = await api.get('/forms', {params: {branchId, departmentId, positionId}});
+            const res = await api.get("/forms", {
+                params: { branchId, departmentId, positionId },
+            });
             const items = res.data || [];
             if (items.length === 1) {
                 setSelectedFormId(items[0].id);
@@ -52,10 +79,13 @@ export default function FormPage() {
             }
             setResults(items);
             if (items.length === 0) {
-                message.info('No form found for the selected group.');
+                message.info("No form found for the selected group.");
             }
         } catch (e) {
-            const msg = e?.response?.data?.message || e.message || 'Failed to search forms';
+            const msg =
+                e?.response?.data?.message ||
+                e.message ||
+                "Failed to search forms";
             message.error(msg);
         } finally {
             setLoading(false);
@@ -110,77 +140,165 @@ export default function FormPage() {
     return (
         <div
             style={{
-                minHeight: '100vh',
-                display: 'flex',
-                flexDirection: 'column',
+                minHeight: "100vh",
+                display: "flex",
+                flexDirection: "column",
             }}
         >
-            <Header style={{
-                background: 'rgb(174, 28, 63)',
-                padding: '5px 24px',
-                borderBottom: '1px solid #f0f0f0',
-                display: 'flex',
-                width: '100%',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                boxSizing: 'border-box',
-            }}>
-                <div style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%'
-                }}>
-                    <div style={{width: '15%', height: '100%'}}>
-                        <img src={logo} style={{height: '100%', width: 'auto'}} alt={'logo'}/>
+            <Header
+                style={{
+                    background: "rgb(174, 28, 63)",
+                    padding: "5px 24px",
+                    borderBottom: "1px solid #f0f0f0",
+                    display: "flex",
+                    width: "100%",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    boxSizing: "border-box",
+                }}
+            >
+                <div
+                    style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: "100%",
+                        height: "100%",
+                    }}
+                >
+                    <div style={{ width: "15%", height: "100%" }}>
+                        <img
+                            src={logo}
+                            style={{ height: "100%", width: "auto" }}
+                            alt={"logo"}
+                        />
                     </div>
-                    <Title level={2} style={{margin: 0, marginLeft: 'auto', marginRight: 'auto', color: 'white', width:'75%', display: 'flex', alignItems: 'center', justifyContent:'center'}}>BẢNG TỰ ĐÁNH GIÁ MỨC ĐỘ HOÀN THÀNH CÔNG VIỆC</Title>
-                    <Space size="large" style={{width: '15%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'flex-end'}}>
-                        <UserInfo/>
+                    <Title
+                        level={2}
+                        style={{
+                            margin: 0,
+                            marginLeft: "auto",
+                            marginRight: "auto",
+                            color: "white",
+                            width: "75%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                        }}
+                    >
+                        BẢNG TỰ ĐÁNH GIÁ MỨC ĐỘ HOÀN THÀNH CÔNG VIỆC
+                    </Title>
+                    <Space
+                        size="large"
+                        style={{
+                            width: "15%",
+                            height: "100%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "flex-end",
+                        }}
+                    >
+                        <UserInfo />
                     </Space>
                 </div>
             </Header>
-            <Space direction="vertical" size="large" style={{width: '100%', maxWidth: 1200, margin: '5px auto 0 auto'}}>
-                <Title level={3} style={{margin: '5px 0 0 0'}}>Cán bộ chọn đúng Chi nhánh, Phòng ban, Chức vụ để lấy form đánh giá chính xác</Title>
-                <Card style={{background: '#eeeeee', boxShadow: '0 2px 4px rgba(0, 0, 0, 0.5)', padding: '0'}}>
+            <Space
+                direction="vertical"
+                size="large"
+                style={{
+                    width: "100%",
+                    maxWidth: 1200,
+                    margin: "5px auto 0 auto",
+                }}
+            >
+                <Title level={3} style={{ margin: "5px 0 0 0" }}>
+                    Cán bộ chọn đúng Chi nhánh, Phòng ban, Chức vụ để lấy form
+                    đánh giá chính xác
+                </Title>
+                <Card
+                    style={{
+                        background: "#eeeeee",
+                        boxShadow: "0 2px 4px rgba(0, 0, 0, 0.5)",
+                        padding: "0",
+                    }}
+                >
                     <Row gutter={[12, 12]}>
                         <Col xs={24} md={8}>
-                            <label style={{display: 'block', marginBottom: 8, fontSize: '16px', fontWeight:'600'}}>Chi nhánh</label>
+                            <label
+                                style={{
+                                    display: "block",
+                                    marginBottom: 8,
+                                    fontSize: "16px",
+                                    fontWeight: "600",
+                                }}
+                            >
+                                Chi nhánh
+                            </label>
                             <Select
-                                style={{width: '100%'}}
-                                size={'large'}
+                                style={{ width: "100%" }}
+                                size={"large"}
                                 placeholder="-- Chọn chi nhánh --"
                                 aria-label="Select Branch"
                                 showSearch={false}
                                 value={branchId}
                                 onChange={handleBranchChange}
-                                options={(orgData.branches || []).map(b => ({value: b.id, label: b.name}))}
+                                options={(orgData.branches || []).map((b) => ({
+                                    value: b.id,
+                                    label: b.name,
+                                }))}
                             />
                         </Col>
                         <Col xs={24} md={8}>
-                            <label style={{display: 'block', marginBottom: 8, fontSize: '16px', fontWeight:'600'}}>Phòng ban</label>
+                            <label
+                                style={{
+                                    display: "block",
+                                    marginBottom: 8,
+                                    fontSize: "16px",
+                                    fontWeight: "600",
+                                }}
+                            >
+                                Phòng ban
+                            </label>
                             <Select
-                                style={{width: '100%'}}
-                                size={'large'}
+                                style={{ width: "100%" }}
+                                size={"large"}
                                 placeholder="-- Chọn phòng ban --"
                                 aria-label="Select Department"
                                 value={departmentId}
                                 showSearch={false}
                                 onChange={handleDeptChange}
-                                options={departments.map(d => ({value: d.id, label: d.name}))}
+                                options={departments.map((d) => ({
+                                    value: d.id,
+                                    label: d.name,
+                                }))}
                                 disabled={!branchId}
                                 ref={deptRef}
                             />
                         </Col>
                         <Col xs={24} md={8}>
-                            <label style={{display: 'block', marginBottom: 8, fontSize: '16px', fontWeight:'600'}}>Chức vụ</label>
+                            <label
+                                style={{
+                                    display: "block",
+                                    marginBottom: 8,
+                                    fontSize: "16px",
+                                    fontWeight: "600",
+                                }}
+                            >
+                                Chức vụ
+                            </label>
                             <Select
-                                style={{width: '100%'}}
-                                size={'large'}
+                                style={{ width: "100%" }}
+                                size={"large"}
                                 placeholder="-- Chọn chức vụ --"
                                 aria-label="Select Position"
                                 value={positionId}
                                 showSearch={false}
                                 allowClear={false}
                                 onChange={handlePosChange}
-                                options={positions.map(p => ({value: p.id, label: p.name}))}
+                                options={positions.map((p) => ({
+                                    value: p.id,
+                                    label: p.name,
+                                }))}
                                 disabled={!departmentId}
                                 ref={posRef}
                             />
@@ -190,14 +308,15 @@ export default function FormPage() {
 
                 {selectedFormId ? (
                     <div>
-                        <FormViewer formId={selectedFormId}/>
+                        <FormViewer formId={selectedFormId} />
                     </div>
                 ) : (
-                    searched && (
-                        <Empty description="Không tìm thấy form."/>
-                    )
+                    searched && <Empty description="Không tìm thấy form." />
                 )}
             </Space>
+
+            {/* Floating Guide Button */}
+            <FloatingGuide />
         </div>
     );
 }
