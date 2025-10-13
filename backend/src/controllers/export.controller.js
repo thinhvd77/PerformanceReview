@@ -338,11 +338,9 @@ const extractSummaryFromFile = async (filePath) => {
     for (let r = headerRowIndex + 1; r <= rowCount; r += 1) {
         const row = ws.getRow(r);
         const label = norm(getCellText(row.getCell(2)));
-        console.log(label);
 
         if (!label) continue;
-        if (label.includes('he so hoan thanh cong viec cua ca nhan sau khi') || label.includes('he so hoan thanh con viec')) {
-            console.log('Found ratio at row', r);
+        if (label.includes('he so hoan thanh cong viec cua ca nhan sau khi') || label.includes('he so hoan thanh cong viec')) {
 
             const cell = row.getCell(scoreColExcel);
             ratioText = getCellText(cell).trim();
@@ -396,7 +394,7 @@ const extractSummaryFromFile = async (filePath) => {
         return clean;
     };
 
-    position = extractPositionFromCellText(getCellText(ws.getCell('A9')));
+    position = extractPositionFromCellText(getCellText(ws.getCell('A10')));
 
     if (!position) {
         for (let r = 7; r <= Math.min(12, rowCount); r += 1) {
@@ -421,65 +419,12 @@ const extractSummaryFromFile = async (filePath) => {
     };
 };
 
-const extractAverageScoreFromFile = async (filePath) => {
-    if (!filePath || !fs.existsSync(filePath)) return null;
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.readFile(filePath);
-    const ws = workbook.worksheets[0];
-    if (!ws) return null;
-
-    const colCount = ws.actualColumnCount || ws.columnCount || 0;
-    const rowCount = ws.actualRowCount || ws.rowCount || 0;
-    if (!colCount || !rowCount) return null;
-
-    let headerRowIndex = null;
-    for (let r = 1; r <= Math.min(rowCount, 40); r += 1) {
-        const text = norm(getCellText(ws.getRow(r).getCell(1)));
-        if (text.startsWith('stt')) {
-            headerRowIndex = r;
-            break;
-        }
-    }
-    if (!headerRowIndex) headerRowIndex = 11;
-
-    const columns = [];
-    for (let c = 1; c <= colCount; c += 1) {
-        columns.push({ label: getCellText(ws.getRow(headerRowIndex).getCell(c)) });
-    }
-    const scoreColIdx = findScoreColumnIndex(columns);
-    const scoreColExcel = scoreColIdx + 1;
-
-    let total = 0;
-    let count = 0;
-    for (let r = headerRowIndex + 1; r <= rowCount; r += 1) {
-        const row = ws.getRow(r);
-        const cell = row.getCell(scoreColExcel);
-        const rawValue = cell?.value;
-        let score = null;
-        if (typeof rawValue === 'number' && Number.isFinite(rawValue)) {
-            score = rawValue;
-        } else {
-            const text = getCellText(cell).trim();
-            score = parseNumberAnyLocale(text);
-        }
-        if (score != null) {
-            if (score > 2 && score <= 100) score /= 100;
-            total += score;
-            count += 1;
-        }
-    }
-
-    if (!count) return null;
-    return total / count;
-};
-
 const getRecordSummary = async (record) => {
     let summary = null;
     try {
         if (record?.filePath) {
             const absPath = path.join(process.cwd(), record.filePath);
             summary = await extractSummaryFromFile(absPath);
-            console.log(summary);
 
         }
     } catch (err) {
@@ -854,6 +799,7 @@ export const exportDepartmentSummary = async (req, res) => {
         });
 
         summaries.forEach(({ record, summary }, index) => {
+            
             const submittedDate = toDate(record.createdAt);
             const ratioValue = (summary?.ratio !== null && summary?.ratio !== undefined && Number.isFinite(summary?.ratio))
                 ? Number(summary.ratio)

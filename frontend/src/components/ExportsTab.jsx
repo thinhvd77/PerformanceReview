@@ -57,6 +57,7 @@ export default function ExportsTab() {
             const {data} = await api.get('/exports', {
                 params: {page, pageSize, q, branchId: branchFilter, departmentId: departmentFilter, ...params},
             });
+            
             setRows(data?.data || []);
             setTotal(data?.total || 0);
             if (typeof data?.page === 'number') setPage(data.page);
@@ -118,6 +119,24 @@ export default function ExportsTab() {
         }
     };
 
+    const formatVietnameseDateTime = (dateString) => {
+        if (!dateString) return '-';
+        try {
+            const date = new Date(dateString);
+            return date.toLocaleString('vi-VN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+        } catch (e) {
+            return dateString;
+        }
+    };
+
     const columns = [
         {title: 'Mã nhân viên', render: (_, r) => r?.employee_code || '-', width: 180},
         {
@@ -131,7 +150,7 @@ export default function ExportsTab() {
             key: 'branch',
             render: (_, r) => (
                 <span>
-          {r?.branch && <Tag color="geekblue">{r?.branch.includes('hs') ? 'Hội sở' : '-'}</Tag>}
+          {r?.branch && <Tag color="geekblue">{branchs[r.branch] || '-'}</Tag>}
         </span>
             ),
         },
@@ -140,11 +159,16 @@ export default function ExportsTab() {
             key: 'dept',
             render: (_, r) => (
                 <span>
-          {r?.department && <Tag color="green">{r.department.includes('kt') ? 'Kế toán & ngân quỹ' : '-'}</Tag>}
+          {r?.department && <Tag color="green">{departments[r.department] || '-'}</Tag>}
         </span>
             ),
         },
-        {title: 'Tạo lúc', dataIndex: 'createdAt', width: 200},
+        {
+            title: 'Tạo lúc', 
+            dataIndex: 'createdAt', 
+            width: 200,
+            render: (text) => formatVietnameseDateTime(text)
+        },
         {
             title: 'Hành động',
             key: 'actions',
