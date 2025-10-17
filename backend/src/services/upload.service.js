@@ -81,6 +81,7 @@ export const processExcelFile = async (file) => {
     const rows = [];
     const lastRow = worksheet.actualRowCount || worksheet.rowCount;
     const lastCol = worksheet.actualColumnCount || worksheet.columnCount;
+    
 
     for (let r = 1; r <= lastRow; r++) {
         const arr = [];
@@ -176,7 +177,7 @@ export const processExcelFile = async (file) => {
     }
     if (looksLikeKpi) {
         // Use up to the first 8 columns like in the screenshot
-        const colLabels = headers.slice(0, Math.min(headers.length, 8));
+        const colLabels = headers.slice(0, Math.min(headers.length, 10));
         table.columns = colLabels.map((label, i) => ({key: `col_${i + 1}`, label}));
         // Adjust merge anchors for the visible column window [1..N]
         const N = table.columns.length;
@@ -259,6 +260,7 @@ export const processExcelFile = async (file) => {
         });
         return obj;
     });
+    
 
     return {title: schema.title, schema, jsonData};
 }

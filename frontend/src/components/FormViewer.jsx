@@ -80,8 +80,45 @@ const AUTO_GROWTH_RULES = [
         fixedPoints: 3, // Cộng 3 điểm
     },
 ];
+
+// Auto minus rules
+const AUTO_MINUS_RULES = [
+    {
+        growthLabel: "Nợ nhóm 2",
+        bonusLabel: "Tỷ lệ nợ nhóm 2 tăng trong Quý",
+        key: "loan-group-2-minus",
+        fixedPoints: -2, // Trừ 2 điểm
+    },
+    {
+        growthLabel: "Nợ xấu",
+        bonusLabel: "Tỷ lệ nợ xấu tăng trong Quý",
+        key: "bad-loan-minus",
+        fixedPoints: -2, // Trừ 2 điểm
+    },
+    {
+        growthLabel: "Tăng trưởng nguồn vốn",
+        bonusLabel:
+            "Nguồn vốn giảm so với số thực hiện Quý trước (không nằm trong kế hoạch)",
+        key: "capital-minus",
+        step: -0.05, // Cứ giảm 5% -1 điểm
+        maxPoints: -5, // Max -5 điểm
+    },
+    {
+        growthLabel: "Tăng trưởng dư nợ",
+        bonusLabel:
+            "Dư nợ giảm so với số thực hiện Quý trước (loại trừ giảm do XLRR)",
+        key: "loan-minus",
+        step: -0.05, // Cứ giảm 5% -1 điểm
+        maxPoints: -5, // Max -5 điểm
+    },
+];
+
 const AUTO_GROWTH_RULE_KEY_SET = new Set(
     AUTO_GROWTH_RULES.map((rule) => rule.key)
+);
+
+const AUTO_MINUS_RULE_KEY_SET = new Set(
+    AUTO_MINUS_RULES.map((rule) => rule.key)
 );
 
 const mergeAddresses = (list = [], extras = []) => {
@@ -184,6 +221,10 @@ const SECTION_OPTIONS = {
             label: "Kết quả kiểm tra kiến thức: Kết quả thi dưới TB/không đạt yêu cầu",
             value: "IV-8",
         }, // -5 điểm
+        {
+            label: "Thực hiện chỉ tiêu thu hồi nợ đã XLRR (nếu có)",
+            value: "IV-9",
+        },
     ],
     V: [
         { label: "Điểm thưởng (tối đa 05 điểm)", value: "V-1" },
@@ -476,7 +517,7 @@ export default function FormViewer({ formId }) {
     const planColIdx = useMemo(() => {
         const cols = template?.schema?.table?.columns || [];
         const idx = cols.findIndex((c) =>
-            normalizeText(c?.label).includes("ke hoach")
+            String(c?.label).toLowerCase().includes("kế hoạch quý này")
         );
         return idx >= 0 ? idx : null;
     }, [template]);
@@ -484,15 +525,34 @@ export default function FormViewer({ formId }) {
     const actualColIdx = useMemo(() => {
         const cols = template?.schema?.table?.columns || [];
         const idx = cols.findIndex((c) =>
-            normalizeText(c?.label).includes("thuc hien")
+            normalizeText(c?.label).includes("thuc hien quy nay")
         );
         return idx >= 0 ? idx : null;
     }, [template]);
 
     const noteColIdx = useMemo(() => {
         const cols = template?.schema?.table?.columns || [];
+        // Tìm cột khớp với nhiều tên phổ biến cho "Ghi chú"
+        const idx = cols.findIndex((c) => {
+            const normalized = normalizeText(c?.label);
+            return normalized.includes("ghi chu");
+        });
+        return idx >= 0 ? idx : null;
+    }, [template]);
+
+    // Cột dữ liệu Quý trước (cho AUTO_MINUS_RULES)
+    const prevActualColIdx = useMemo(() => {
+        const cols = template?.schema?.table?.columns || [];
         const idx = cols.findIndex((c) =>
-            normalizeText(c?.label).includes("ghi chu")
+            String(c?.label).toLowerCase().includes("thực hiện quý trước")
+        );
+        return idx >= 0 ? idx : null;
+    }, [template]);
+
+    const prevPlanColIdx = useMemo(() => {
+        const cols = template?.schema?.table?.columns || [];
+        const idx = cols.findIndex((c) =>
+            normalizeText(c?.label).includes("ke hoach quy truoc")
         );
         return idx >= 0 ? idx : null;
     }, [template]);
@@ -630,6 +690,18 @@ export default function FormViewer({ formId }) {
         const existingAddrs = childrenScoreAddrs[rowIndex] || [];
         const nextAddrs = [...existingAddrs, childScoreAddr];
 
+        // Kiểm tra nếu là tiêu chí "Thực hiện chỉ tiêu thu hồi nợ đã XLRR (nếu có)"
+        const isDebtRecoveryCriterion = String(label)
+            .toLowerCase()
+            .includes("thực hiện chỉ tiêu thu hồi nợ đã xlrr");
+
+        // Kiểm tra nếu thuộc section "Chỉ tiêu định tính" (section II)
+        const currentParentRow = table?.rows?.[rowIndex];
+        const parentCriteria = String(
+            currentParentRow?.cells?.[1]?.value || ""
+        ).trim();
+        const isQualitativeCriterion = isQualitativeLabel(parentCriteria);
+
         setTable((prev) => {
             if (!prev) return prev;
             const cols = prev.columns?.length || 0;
@@ -645,21 +717,84 @@ export default function FormViewer({ formId }) {
                     input: false,
                 })),
             };
-            // ô "Điểm theo mức độ hoàn thành" của dòng con là input có addr ảo
-            newRow.cells[scoreColIdx] = {
-                ...newRow.cells[scoreColIdx],
-                addr: childScoreAddr,
-                input: true,
-                value: "",
-            };
-            // thêm ô input ở ô kế bên ô "Điểm theo mức độ hoàn thành"
-            if (noteColIdx != null && noteColIdx !== scoreColIdx) {
-                newRow.cells[noteColIdx] = {
-                    ...newRow.cells[noteColIdx],
-                    addr: `${numToCol(noteColIdx + 1)}${virtualRowNo}`,
+
+            // Xử lý đặc biệt cho tiêu chí thu hồi nợ đã XLRR
+            if (
+                isDebtRecoveryCriterion &&
+                planColIdx != null &&
+                actualColIdx != null
+            ) {
+                // Tạo địa chỉ ảo cho "Kế hoạch" và "Thực hiện"
+                const planAddr = `${numToCol(planColIdx + 1)}${virtualRowNo}`;
+                const actualAddr = `${numToCol(
+                    actualColIdx + 1
+                )}${virtualRowNo}`;
+
+                // Ô "Kế hoạch quý này" là input
+                newRow.cells[planColIdx] = {
+                    ...newRow.cells[planColIdx],
+                    addr: planAddr,
                     input: true,
                     value: "",
                 };
+
+                // Ô "Thực hiện quý này" là input
+                newRow.cells[actualColIdx] = {
+                    ...newRow.cells[actualColIdx],
+                    addr: actualAddr,
+                    input: true,
+                    value: "",
+                };
+
+                // Ô "Điểm theo mức độ hoàn thành" là công thức: =MAX(0, 10-(actual/plan*10))
+                newRow.cells[scoreColIdx] = {
+                    ...newRow.cells[scoreColIdx],
+                    addr: childScoreAddr,
+                    input: false,
+                    formula: `=MAX(0, 10-(${actualAddr}/${planAddr}*10))`,
+                    value: "",
+                };
+            } else if (isQualitativeCriterion && actualColIdx != null) {
+                // Xử lý đặc biệt cho các tiêu chí thuộc "Chỉ tiêu định tính"
+                // Tạo ô nhập số lần vi phạm tại cột "Thực hiện quý này"
+                const actualAddr = `${numToCol(
+                    actualColIdx + 1
+                )}${virtualRowNo}`;
+
+                newRow.cells[actualColIdx] = {
+                    ...newRow.cells[actualColIdx],
+                    addr: actualAddr,
+                    input: true,
+                    value: "",
+                };
+
+                // Ô "Điểm theo mức độ hoàn thành" là công thức: =2*violations
+                // (tổng điểm trừ, mỗi vi phạm trừ 2 điểm)
+                newRow.cells[scoreColIdx] = {
+                    ...newRow.cells[scoreColIdx],
+                    addr: childScoreAddr,
+                    input: false,
+                    formula: `=2*${actualAddr}`,
+                    value: "",
+                };
+            } else {
+                // Xử lý bình thường cho các tiêu chí khác
+                // ô "Điểm theo mức độ hoàn thành" của dòng con là input có addr ảo
+                newRow.cells[scoreColIdx] = {
+                    ...newRow.cells[scoreColIdx],
+                    addr: childScoreAddr,
+                    input: true,
+                    value: "",
+                };
+                // thêm ô input ở ô kế bên ô "Điểm theo mức độ hoàn thành"
+                if (noteColIdx != null && noteColIdx !== scoreColIdx) {
+                    newRow.cells[noteColIdx] = {
+                        ...newRow.cells[noteColIdx],
+                        addr: `${numToCol(noteColIdx + 1)}${virtualRowNo}`,
+                        input: true,
+                        value: "",
+                    };
+                }
             }
 
             const nextRows = [...(prev.rows || [])];
@@ -702,6 +837,17 @@ export default function FormViewer({ formId }) {
         const parentRowIndex = childAddrToParentRow[childScoreAddr];
         if (parentRowIndex === undefined) return;
 
+        // Lấy tất cả addresses từ dòng sẽ bị xóa để cleanup
+        const rowToDelete = table?.rows?.[rowIndex];
+        const addressesToCleanup = [];
+        if (rowToDelete?.cells) {
+            rowToDelete.cells.forEach((cell) => {
+                if (cell?.addr && (cell.input || cell.formula)) {
+                    addressesToCleanup.push(cell.addr);
+                }
+            });
+        }
+
         setTable((prev) => {
             if (!prev) return prev;
             const nextRows = [...(prev.rows || [])];
@@ -737,11 +883,14 @@ export default function FormViewer({ formId }) {
             return { ...prev, [parentRowIndex]: arr };
         });
 
-        // 4) Xoá input đã nhập cho addr con (nếu có)
+        // 4) Xoá TÂT CẢ input đã nhập cho các addr trong dòng bị xóa
         setCellInputs((prev) => {
-            if (!(childScoreAddr in prev)) return prev;
-            const { [childScoreAddr]: _drop, ...rest } = prev;
-            return rest;
+            if (!addressesToCleanup.length) return prev;
+            const next = { ...prev };
+            addressesToCleanup.forEach((addr) => {
+                delete next[addr];
+            });
+            return next;
         });
     };
 
@@ -1143,6 +1292,409 @@ export default function FormViewer({ formId }) {
         virtualRowNo,
     ]);
 
+    // AUTO_MINUS_RULES useEffect for Section IV (Điểm trừ)
+    useEffect(() => {
+        if (
+            !table?.rows ||
+            scoreColIdx == null ||
+            planColIdx == null ||
+            actualColIdx == null
+        )
+            return;
+
+        const rows = table.rows;
+        const findParentIndex = (rowsList) =>
+            rowsList.findIndex(
+                (row) => normalizeText(row?.cells?.[0]?.value) === "iv"
+            );
+
+        const parentRowIdx = findParentIndex(rows);
+        if (parentRowIdx === -1) return;
+
+        const autoRowsByKey = new Map();
+        const autoAddrsSet = new Set();
+        rows.forEach((row, idx) => {
+            const key = row?.autoGeneratedKey;
+            if (key && AUTO_MINUS_RULE_KEY_SET.has(key)) {
+                autoRowsByKey.set(key, { row, idx });
+                const addr = row?.cells?.[scoreColIdx]?.addr;
+                if (addr) autoAddrsSet.add(addr);
+            }
+        });
+
+        const currentManualAddrs = childrenScoreAddrs[parentRowIdx] || [];
+        const manualAddrs = currentManualAddrs.filter(
+            (addr) => addr && !autoAddrsSet.has(addr)
+        );
+        if (manualAddrs.length !== currentManualAddrs.length) {
+            setChildrenScoreAddrs((prev) => ({
+                ...prev,
+                [parentRowIdx]: manualAddrs,
+            }));
+            return;
+        }
+
+        const otherAutoAddrsFor = (excludeKey) =>
+            Array.from(autoRowsByKey.entries())
+                .filter(([key]) => key !== excludeKey)
+                .map(([, info]) => info.row?.cells?.[scoreColIdx]?.addr)
+                .filter(Boolean);
+
+        const parentRow = rows[parentRowIdx];
+        const parentCriteria = String(
+            parentRow?.cells?.[1]?.value || ""
+        ).trim();
+
+        const parentFormulaFor = (autoAddrs) => {
+            const allAddrs = mergeAddresses(manualAddrs, autoAddrs);
+            return buildParentFormula(parentCriteria, allAddrs);
+        };
+
+        const findInsertIndex = (rowsList, parentIdx) => {
+            let insertIdx = parentIdx + 1;
+            while (insertIdx < rowsList.length) {
+                const roman = String(
+                    rowsList[insertIdx]?.cells?.[0]?.value || ""
+                ).trim();
+                if (/^(II|III|IV|V|D)$/i.test(roman)) break;
+                insertIdx += 1;
+            }
+            return insertIdx;
+        };
+
+        const processMinusRule = (rule) => {
+            const {
+                growthLabel,
+                bonusLabel,
+                key,
+                fixedPoints,
+                step,
+                maxPoints,
+            } = rule;
+            const autoInfo = autoRowsByKey.get(key) || null;
+            const autoRowIdx = autoInfo?.idx ?? -1;
+            const autoAddr = autoInfo?.row?.cells?.[scoreColIdx]?.addr || null;
+            const otherAutoAddrs = otherAutoAddrsFor(key);
+
+            const growthRowIdx = rows.findIndex(
+                (row) =>
+                    normalizeText(row?.cells?.[1]?.value) ===
+                    normalizeText(growthLabel)
+            );
+
+            let planValue = null;
+            let actualValue = null;
+            let prevActualValue = null;
+
+            if (growthRowIdx !== -1) {
+                const planCell = rows[growthRowIdx]?.cells?.[planColIdx];
+                const actualCell = rows[growthRowIdx]?.cells?.[actualColIdx];
+                const prevActualCell =
+                    prevActualColIdx != null
+                        ? rows[growthRowIdx]?.cells?.[prevActualColIdx]
+                        : null;
+
+                const hasParentInput = actualCell?.input || actualCell?.addr;
+                const parentActualValue = resolveCellNumericValue(actualCell);
+                const parentPlanValue = resolveCellNumericValue(planCell);
+                const parentPrevActualValue = prevActualCell
+                    ? resolveCellNumericValue(prevActualCell)
+                    : null;
+
+                if (
+                    hasParentInput &&
+                    parentActualValue !== null &&
+                    parentActualValue !== 0
+                ) {
+                    planValue = parentPlanValue;
+                    actualValue = parentActualValue;
+                    prevActualValue = parentPrevActualValue;
+                } else {
+                    let totalPlan = 0;
+                    let totalActual = 0;
+                    let totalPrevActual = 0;
+                    let hasChildData = false;
+
+                    for (let i = growthRowIdx + 1; i < rows.length; i++) {
+                        const childRow = rows[i];
+                        const childSTT = String(
+                            childRow?.cells?.[0]?.value || ""
+                        ).trim();
+
+                        if (childSTT && /^[IVXivx0-9]+$/i.test(childSTT)) break;
+
+                        const childPlanCell = childRow?.cells?.[planColIdx];
+                        const childActualCell = childRow?.cells?.[actualColIdx];
+                        const childPrevActualCell =
+                            prevActualColIdx != null
+                                ? childRow?.cells?.[prevActualColIdx]
+                                : null;
+
+                        if (childPlanCell || childActualCell) {
+                            const childPlan =
+                                resolveCellNumericValue(childPlanCell) || 0;
+                            const childActual =
+                                resolveCellNumericValue(childActualCell) || 0;
+                            const childPrevActual = childPrevActualCell
+                                ? resolveCellNumericValue(
+                                      childPrevActualCell
+                                  ) || 0
+                                : 0;
+
+                            totalPlan += childPlan;
+                            totalActual += childActual;
+                            totalPrevActual += childPrevActual;
+
+                            if (childActual > 0) hasChildData = true;
+                        }
+                    }
+
+                    if (hasChildData || totalPlan > 0) {
+                        planValue = totalPlan > 0 ? totalPlan : parentPlanValue;
+                        actualValue = totalActual;
+                        prevActualValue =
+                            totalPrevActual > 0
+                                ? totalPrevActual
+                                : parentPrevActualValue;
+                    } else {
+                        planValue = parentPlanValue;
+                        actualValue = parentActualValue;
+                        prevActualValue = parentPrevActualValue;
+                    }
+                }
+            }
+
+            const removeAutoRow = () => {
+                if (!autoInfo) return false;
+                const desiredFormula = parentFormulaFor(otherAutoAddrs);
+                setTable((prev) => {
+                    if (!prev?.rows) return prev;
+                    const nextRows = prev.rows.filter(
+                        (row) => row?.autoGeneratedKey !== key
+                    );
+                    const parentIdxNext = findParentIndex(nextRows);
+                    if (parentIdxNext !== -1) {
+                        const parentRow = nextRows[parentIdxNext];
+                        if (parentRow?.cells) {
+                            const parentCells = parentRow.cells.map(
+                                (cell, idx) =>
+                                    idx === scoreColIdx
+                                        ? { ...cell, formula: desiredFormula }
+                                        : cell
+                            );
+                            nextRows[parentIdxNext] = {
+                                ...parentRow,
+                                cells: parentCells,
+                            };
+                        }
+                    }
+                    return { ...prev, rows: nextRows };
+                });
+                if (autoAddr) {
+                    setCellInputs((prev) => {
+                        if (!prev || !(autoAddr in prev)) return prev;
+                        const { [autoAddr]: _omit, ...rest } = prev;
+                        return rest;
+                    });
+                }
+                return true;
+            };
+
+            let minusPoints = 0;
+            let noteText = "";
+
+            // Handle fixed-point rules (Nợ nhóm 2, Nợ xấu)
+            if (fixedPoints && !step) {
+                // Compare current vs previous quarter
+                const valid =
+                    actualValue !== null &&
+                    prevActualValue !== null &&
+                    Number.isFinite(actualValue) &&
+                    Number.isFinite(prevActualValue) &&
+                    prevActualValue !== 0;
+
+                if (valid) {
+                    const increased = actualValue > prevActualValue;
+                    if (increased) {
+                        minusPoints = Math.abs(fixedPoints); // Use absolute value
+                        const increaseRatio =
+                            (actualValue - prevActualValue) /
+                            Math.abs(prevActualValue);
+                        noteText = `Tăng ${formatPercentVi(increaseRatio)}`;
+                    }
+                }
+            }
+            // Handle step-based rules (Nguồn vốn giảm, Dư nợ giảm)
+            else if (step && maxPoints) {
+                // Compare current quarter actual vs previous quarter actual
+                const valid =
+                    prevActualValue !== null &&
+                    actualValue !== null &&
+                    Number.isFinite(prevActualValue) &&
+                    prevActualValue !== 0 &&
+                    Number.isFinite(actualValue);
+
+                if (valid) {
+                    const negativeRatio =
+                        prevActualValue > actualValue
+                            ? (prevActualValue - actualValue) /
+                              Math.abs(prevActualValue)
+                            : 0;
+
+                    if (negativeRatio > 0) {
+                        const absStep = Math.abs(step);
+                        const rawPoints = Math.floor(
+                            (negativeRatio + 1e-9) / absStep
+                        );
+                        const absMaxPoints = Math.abs(maxPoints);
+                        minusPoints = Math.min(absMaxPoints, rawPoints);
+                        noteText = `Giảm ${formatPercentVi(
+                            negativeRatio
+                        )} so với Quý trước`;
+                    }
+                }
+            }
+
+            if (minusPoints <= 0) {
+                return removeAutoRow();
+            }
+
+            if (!autoInfo) {
+                const scoreColLetter = numToCol(scoreColIdx + 1);
+                const newAddr = `${scoreColLetter}${virtualRowNo}`;
+                const desiredFormula = parentFormulaFor(
+                    mergeAddresses(otherAutoAddrs, newAddr)
+                );
+                setTable((prev) => {
+                    if (!prev?.rows) return prev;
+                    const nextRows = [...prev.rows];
+                    const parentIdxNext = findParentIndex(nextRows);
+                    if (parentIdxNext === -1) return prev;
+                    const columnCount =
+                        nextRows[parentIdxNext]?.cells?.length ||
+                        prev.columns?.length ||
+                        table?.columns?.length ||
+                        0;
+                    if (!columnCount) return prev;
+                    const insertIdx = findInsertIndex(nextRows, parentIdxNext);
+                    const newCells = Array.from(
+                        { length: columnCount },
+                        (_, cIdx) => ({
+                            addr: null,
+                            value: "",
+                            rowSpan: 1,
+                            colSpan: 1,
+                            hidden: false,
+                            input: false,
+                        })
+                    );
+                    if (newCells[1])
+                        newCells[1] = { ...newCells[1], value: bonusLabel };
+                    if (noteColIdx != null && newCells[noteColIdx]) {
+                        newCells[noteColIdx] = {
+                            ...newCells[noteColIdx],
+                            value: noteText,
+                        };
+                    }
+                    newCells[scoreColIdx] = {
+                        ...newCells[scoreColIdx],
+                        addr: newAddr,
+                        value: minusPoints,
+                        input: false,
+                    };
+                    nextRows.splice(insertIdx, 0, {
+                        autoGenerated: true,
+                        autoGeneratedKey: key,
+                        cells: newCells,
+                    });
+                    const parentRow = nextRows[parentIdxNext];
+                    if (parentRow?.cells) {
+                        const parentCells = parentRow.cells.map((cell, idx) =>
+                            idx === scoreColIdx
+                                ? { ...cell, formula: desiredFormula }
+                                : cell
+                        );
+                        nextRows[parentIdxNext] = {
+                            ...parentRow,
+                            cells: parentCells,
+                        };
+                    }
+                    return { ...prev, rows: nextRows };
+                });
+                setVirtualRowNo((n) => n + 1);
+                return true;
+            }
+
+            const combinedAutoAddrs = mergeAddresses(
+                otherAutoAddrs,
+                autoAddr ? [autoAddr] : []
+            );
+            const desiredFormula = parentFormulaFor(combinedAutoAddrs);
+            const currentFormula =
+                rows[parentRowIdx]?.cells?.[scoreColIdx]?.formula || "";
+            const currentScore = autoInfo.row?.cells?.[scoreColIdx]?.value;
+            const currentNote =
+                noteColIdx != null
+                    ? autoInfo.row?.cells?.[noteColIdx]?.value || ""
+                    : "";
+            const needRowUpdate =
+                String(currentScore ?? "") !== String(minusPoints) ||
+                currentNote !== noteText;
+            const needParentUpdate = currentFormula !== desiredFormula;
+
+            if (!needRowUpdate && !needParentUpdate) return false;
+
+            setTable((prev) => {
+                if (!prev?.rows) return prev;
+                const nextRows = prev.rows.map((row, idx) => {
+                    if (idx === autoRowIdx && row?.cells) {
+                        const cells = row.cells.map((cell, cIdx) => {
+                            if (cIdx === scoreColIdx) {
+                                return { ...cell, value: minusPoints };
+                            }
+                            if (noteColIdx != null && cIdx === noteColIdx) {
+                                return { ...cell, value: noteText };
+                            }
+                            return cell;
+                        });
+                        return { ...row, cells };
+                    }
+                    if (
+                        normalizeText(row?.cells?.[0]?.value) === "iv" &&
+                        row?.cells
+                    ) {
+                        const cells = row.cells.map((cell, cIdx) => {
+                            if (cIdx === scoreColIdx) {
+                                return { ...cell, formula: desiredFormula };
+                            }
+                            return cell;
+                        });
+                        return { ...row, cells };
+                    }
+                    return row;
+                });
+                return { ...prev, rows: nextRows };
+            });
+            return true;
+        };
+
+        for (const rule of AUTO_MINUS_RULES) {
+            if (processMinusRule(rule)) return;
+        }
+    }, [
+        table,
+        scoreColIdx,
+        planColIdx,
+        actualColIdx,
+        prevActualColIdx,
+        prevPlanColIdx,
+        noteColIdx,
+        childrenScoreAddrs,
+        cellInputs,
+        computedByAddr,
+        virtualRowNo,
+    ]);
+
     const handleExport = async () => {
         try {
             // Map user fullname -> employee_name and selected position -> role
@@ -1198,7 +1750,6 @@ export default function FormViewer({ formId }) {
                 fd.append("fileName", fileName);
                 fd.append("formId", id || template?.id || "");
                 fd.append("table", JSON.stringify(table));
-                console.log(table);
 
                 const resp = await api.post("/exports", fd, {
                     headers: { "Content-Type": "multipart/form-data" },

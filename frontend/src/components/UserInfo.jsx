@@ -18,7 +18,7 @@ export default function UserInfo({ size = "small" }) {
     const [pwdOpen, setPwdOpen] = useState(false);
     const navigate = useNavigate();
     const location = useLocation();
-    const isManager = typeof user?.role === "string" && user.role.toLowerCase() === "manager";
+    const isManager = typeof user?.role === "string" && user.role.toLowerCase() === "manager" || user?.username === "201100069";
     const onDashboard = location?.pathname?.startsWith("/dashboard");
 
     // useEffect(() => {

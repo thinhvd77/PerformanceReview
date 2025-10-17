@@ -86,12 +86,13 @@ const getDepartmentLabel = (branchId, departmentId) => {
 };
 export default function DashboardPage() {
     const { user } = useAuth();
+    console.log(user);
+    
     const normalizedRole = (user?.role || "").toString().toLowerCase();
     const normalizedDepartment = (user?.department || "")
         .toString()
         .toLowerCase();
-    const isTHManager =
-        normalizedRole === "manager" && normalizedDepartment === "th";
+    const isTHManager = user.username === "201100069";
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState("");

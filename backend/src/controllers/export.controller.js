@@ -185,8 +185,11 @@ const getManagerContext = async (req, options = {}) => {
         throw err;
     }
 
+    // Allow special user "201100069" to access department submissions
+    const isSpecialUser = username === '201100069';
+
     const role = (manager.role || '').toLowerCase();
-    if (role !== 'manager') {
+    if (role !== 'manager' && !isSpecialUser) {
         const err = new Error('Only managers can access department submissions');
         err.status = 403;
         throw err;
@@ -651,7 +654,7 @@ export const exportDepartmentSummary = async (req, res) => {
         const departmentName = mapDepartmentName(branch, department);
 
         const shortDeptNameMap = {
-            'Phòng Kế toán & ngân quỹ': 'P.KT&NGQ',
+            'Phòng Kế toán & ngân quỹ': 'P.KT&NQ',
             'Phòng giao dịch Bình Tây': 'PGD Bình Tây',
             'Phòng Khách hàng cá nhân': 'P.KHCN',
             'Phòng Khách hàng doanh nghiệp': 'P.KHDN',
@@ -663,7 +666,7 @@ export const exportDepartmentSummary = async (req, res) => {
         };
 
         const shortDeptNameMapHead = {
-            'Phòng Kế toán & ngân quỹ': 'Phòng KT&NGQ',
+            'Phòng Kế toán & ngân quỹ': 'Phòng KT&NQ',
             'Phòng giao dịch Bình Tây': 'PGD BÌNH TÂY',
             'Phòng Khách hàng cá nhân': 'Phòng KHCN',
             'Phòng Khách hàng doanh nghiệp': 'Phòng KHDN',
@@ -799,7 +802,7 @@ export const exportDepartmentSummary = async (req, res) => {
         });
 
         summaries.forEach(({ record, summary }, index) => {
-            
+
             const submittedDate = toDate(record.createdAt);
             const ratioValue = (summary?.ratio !== null && summary?.ratio !== undefined && Number.isFinite(summary?.ratio))
                 ? Number(summary.ratio)
