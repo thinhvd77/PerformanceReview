@@ -14,10 +14,18 @@ import {
     message,
     Modal,
     Popconfirm,
+    InputNumber,
+    Divider,
 } from "antd";
-import { PlusCircleOutlined, SearchOutlined } from "@ant-design/icons";
+import {
+    PlusCircleOutlined,
+    SearchOutlined,
+    LineChartOutlined,
+} from "@ant-design/icons";
 import { authService } from "../services/authService.js";
 import { userService } from "../services/userService.js";
+import api from "../services/api.js";
+import UserMetricsModal from "./UserMetricsModal.jsx";
 
 const { Title } = Typography;
 
@@ -72,6 +80,8 @@ export default function UserManagementTab() {
     const [editOpen, setEditOpen] = useState(false);
     const [editing, setEditing] = useState(false);
     const [currentUser, setCurrentUser] = useState(null);
+    const [metricsOpen, setMetricsOpen] = useState(false);
+    const [selectedMetricsUser, setSelectedMetricsUser] = useState(null);
 
     const handleCreateModalClose = () => {
         if (creating) return;
@@ -161,6 +171,16 @@ export default function UserManagementTab() {
         }
     };
 
+    const handleViewMetrics = (user) => {
+        setSelectedMetricsUser(user);
+        setMetricsOpen(true);
+    };
+
+    const handleMetricsClose = () => {
+        setMetricsOpen(false);
+        setSelectedMetricsUser(null);
+    };
+
     const handleTableChange = (pagination) => {
         const { current, pageSize } = pagination;
         setFilters((prev) => ({
@@ -219,6 +239,13 @@ export default function UserManagementTab() {
             key: "actions",
             render: (_, record) => (
                 <Space>
+                    <Button
+                        size="small"
+                        icon={<LineChartOutlined />}
+                        onClick={() => handleViewMetrics(record)}
+                    >
+                        Metrics
+                    </Button>
                     <Button
                         size="small"
                         onClick={() => {
@@ -657,7 +684,10 @@ export default function UserManagementTab() {
                                 { value: "manager", label: "Trưởng phòng" },
                                 { value: "deputy_manager", label: "Phó phòng" },
                                 { value: "director", label: "Giám đốc" },
-                                { value: "deputy_director", label: "Phó giám đốc" },
+                                {
+                                    value: "deputy_director",
+                                    label: "Phó giám đốc",
+                                },
                             ]}
                             style={{ maxWidth: 240 }}
                         />
@@ -684,6 +714,11 @@ export default function UserManagementTab() {
                     </Form.Item>
                 </Form>
             </Modal>
+            <UserMetricsModal
+                open={metricsOpen}
+                user={selectedMetricsUser}
+                onClose={handleMetricsClose}
+            />
         </Space>
     );
 }

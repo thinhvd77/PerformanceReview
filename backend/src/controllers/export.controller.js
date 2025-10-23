@@ -16,11 +16,8 @@ ensureDir(EXPORT_DIR);
 // Helper function to get current quarter and year
 const getCurrentQuarterYear = () => {
     const now = new Date();
-    const month = now.getMonth(); // getMonth() returns 0-11
-    let quarter = 1;
-    if (month >= 4 && month <= 6) quarter = 2;
-    else if (month >= 7 && month <= 9) quarter = 3;
-    else if (month >= 10 && month <= 12) quarter = 4;
+    const month = now.getMonth() + 1; // Convert 0-11 to 1-12
+    const quarter = Math.ceil(month / 3); // Calculate quarter: 1-4
 
     return {
         quarter,
@@ -40,7 +37,7 @@ const createExportDirectory = (year, quarter) => {
 };
 
 // Helper function to generate clean filename with employee info
-const generateExportFileName = (originalFileName, employeeCode, employeeName) => {
+const generateExportFileName = (originalFileName, employeeCode, employeeName, quarter, year) => {
     // Extract file extension
     const ext = path.extname(originalFileName) || '.xlsx';
 
@@ -52,7 +49,10 @@ const generateExportFileName = (originalFileName, employeeCode, employeeName) =>
     // Generate timestamp
     const timestamp = new Date().toISOString().slice(0, 19).replace(/[T:]/g, '_');
 
-    return `${employeeCode}_${cleanEmployeeName}_${timestamp}${ext}`;
+    // Include quarter and year in filename for better organization
+    const quarterYear = quarter && year ? `Q${quarter}_${year}_` : '';
+
+    return `${quarterYear}${employeeCode}_${cleanEmployeeName}_${timestamp}${ext}`;
 };
 
 const norm = (s) => String(s || '')
@@ -497,10 +497,28 @@ export const createExport = async (req, res) => {
         if (!file) return res.status(400).json({ message: 'No file uploaded' });
 
         const employee_code = req.user?.username;
-        const { formId, fileName, table } = req.body || {};
+        const { formId, fileName, table, quarter: bodyQuarter, year: bodyYear } = req.body || {};
 
-        // Get current quarter and year for form submission
-        const { quarter, year } = getCurrentQuarterYear();
+        // Use quarter/year from request body (UI selection) if available, otherwise calculate from current date
+        let quarter, year;
+        if (bodyQuarter && bodyYear) {
+            quarter = parseInt(bodyQuarter, 10);
+            year = parseInt(bodyYear, 10);
+            console.log(`Using quarter/year from UI: Q${quarter} ${year}`);
+        } else {
+            const current = getCurrentQuarterYear();
+            quarter = current.quarter;
+            year = current.year;
+            console.log(`No quarter/year in request, using current: Q${quarter} ${year}`);
+        }
+
+        // Validate quarter and year
+        if (!quarter || !year || quarter < 1 || quarter > 4 || year < 2020 || year > 2030) {
+            return res.status(400).json({
+                message: 'Invalid quarter or year',
+                received: { quarter, year }
+            });
+        }
 
         // Fetch employee information for filename generation
         const userRepo = AppDataSource.getRepository(User.options.name);
@@ -510,9 +528,9 @@ export const createExport = async (req, res) => {
         // Create organized directory structure
         const quarterDir = createExportDirectory(year, quarter);
 
-        // Generate clean filename with employee info
+        // Generate clean filename with employee info, including quarter and year
         const originalFileName = fileName && typeof fileName === 'string' ? fileName : (file.originalname || file.filename);
-        const organizedFileName = generateExportFileName(originalFileName, employee_code, employeeName);
+        const organizedFileName = generateExportFileName(originalFileName, employee_code, employeeName, quarter, year);
 
         // Move file from uploads root to organized directory structure
         const originalPath = path.join(process.cwd(), 'uploads', file.filename);
@@ -737,21 +755,35 @@ export const exportDepartmentSummary = async (req, res) => {
         ws.getCell('B6').alignment = { horizontal: 'center', wrapText: true };
         // ws.getCell('A6').height = 40;
 
-        let quarter = 'I';
-        const month = new Date().getMonth();
-        if (month >= 4 && month <= 6) quarter = 'II';
-        else if (month >= 7 && month <= 9) quarter = 'III';
-        else if (month >= 10 && month <= 12) quarter = 'IV';
+        // Get quarter and year from records data
+        const recordQuarter = records[0]?.quarter;
+        const recordYear = records[0]?.year;
+
+        // If we have quarter/year from records, use them; otherwise calculate from current date
+        let displayQuarterRoman = 'I';
+        let displayYear = new Date().getFullYear();
+
+        if (recordQuarter && recordYear) {
+            const quarterMap = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV' };
+            displayQuarterRoman = quarterMap[recordQuarter] || 'I';
+            displayYear = recordYear;
+        } else {
+            // Fallback: calculate from current date using same logic as getCurrentQuarterYear()
+            const month = new Date().getMonth() + 1; // Convert 0-11 to 1-12
+            const quarter = Math.ceil(month / 3); // 1-4
+            const quarterMap = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV' };
+            displayQuarterRoman = quarterMap[quarter] || 'I';
+        }
 
         ws.mergeCells('B7:E7');
-        ws.getCell('B7').value = `QUÝ ${quarter} NĂM ${new Date().getFullYear()}`;
+        ws.getCell('B7').value = `QUÝ ${displayQuarterRoman} NĂM ${displayYear}`;
         ws.getCell('B7').font = { name: 'Times New Roman', size: 12, bold: true };
         ws.getCell('B7').alignment = { horizontal: 'center' };
 
         ws.addRow([]);
 
         ws.mergeCells('A9:F9');
-        ws.getCell('A9').value = `Căn cứ chỉ tiêu Quý ${quarter} năm ${new Date().getFullYear()} được giao;`;
+        ws.getCell('A9').value = `Căn cứ chỉ tiêu Quý ${displayQuarterRoman} năm ${displayYear} được giao;`;
         ws.getCell('A9').font = { name: 'Times New Roman', size: 12 };
         ws.getCell('A9').alignment = { horizontal: 'left' };
 
@@ -856,13 +888,21 @@ export const exportDepartmentSummary = async (req, res) => {
         const output = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
         const safeBranch = sanitizeForFilename(branchName);
         const safeDepartment = sanitizeForFilename(departmentName);
+
+        // Get quarter and year from the first record (all records should be from same quarter/year)
+        const firstRecord = records[0];
+        const quarter = firstRecord?.quarter || null;
+        const year = firstRecord?.year || null;
+
+        // Build filename with quarter/year if available
+        const quarterYearPart = (quarter && year) ? `Q${quarter}_${year}_` : '';
         const now = new Date();
         const stamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
 
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         res.setHeader(
             'Content-Disposition',
-            `attachment; filename="Tong_ket_xep_loai_${safeBranch}_${safeDepartment}_${stamp}.xlsx"`
+            `attachment; filename="Tong_ket_xep_loai_${quarterYearPart}${safeBranch}_${safeDepartment}_${stamp}.xlsx"`
         );
 
         return res.send(output);

@@ -112,6 +112,8 @@ export default async function exportFormExcel({
     role = '',
     branch = '',
     department = '',
+    quarter = null,  // Quý được chọn từ UI (1-4)
+    year = null,     // Năm được chọn từ UI
     protectSheet = false,
     protectPassword = '',
     allowSelectUnlocked = true,
@@ -303,14 +305,25 @@ export default async function exportFormExcel({
     ws.getCell('A7').font = { name: 'Times New Roman', size: 11, bold: true };
     ws.getCell('A7').alignment = { horizontal: 'center' };
 
-    let quarter = 'I';
-    const month = new Date().getMonth();
-    if (month >= 4 && month <= 6) quarter = 'II';
-    else if (month >= 7 && month <= 9) quarter = 'III';
-    else if (month >= 10 && month <= 12) quarter = 'IV';
+    // Sử dụng quarter và year từ UI, hoặc fallback về giá trị tự động
+    let displayQuarter = 'I';
+    let displayYear = new Date().getFullYear();
+
+    if (quarter && year) {
+        // Sử dụng giá trị từ UI
+        const quarterMap = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV' };
+        displayQuarter = quarterMap[quarter] || 'I';
+        displayYear = year;
+    } else {
+        // Fallback: tự động tính toán
+        const month = new Date().getMonth();
+        if (month >= 3 && month <= 5) displayQuarter = 'II';
+        else if (month >= 6 && month <= 8) displayQuarter = 'III';
+        else if (month >= 9 && month <= 11) displayQuarter = 'IV';
+    }
 
     safeMergeCells(ws, `A8:${toCol(colCount)}8`);
-    ws.getCell('A8').value = `Quý ${quarter} Năm ${new Date().getFullYear()}`;
+    ws.getCell('A8').value = `Quý ${displayQuarter} Năm ${displayYear}`;
     ws.getCell('A8').font = { name: 'Times New Roman', size: 11, bold: true };
     ws.getCell('A8').alignment = { horizontal: 'center' };
 

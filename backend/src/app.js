@@ -4,15 +4,18 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 import bcrypt from "bcryptjs";
-import {fileURLToPath} from 'url';
+import { fileURLToPath } from 'url';
 import swaggerUi from 'swagger-ui-express';
-import {swaggerSpec} from './config/swaggerDef.js'
-import {AppDataSource} from './config/database.js';
+import { swaggerSpec } from './config/swaggerDef.js'
+import { AppDataSource } from './config/database.js';
 import userRoutes from './routes/user.routes.js';
 import uploadRoutes from "./routes/upload.routes.js";
 import formTemplateRoutes from './routes/formTemplate.routes.js';
 import exportRoutes from './routes/export.routes.js';
 import recordRoutes from "./routes/record.routes.js";
+import quarterlyMetricRoutes from "./routes/quarterlyMetric.routes.js";
+import annualMetricRoutes from "./routes/annualMetric.routes.js";
+import bonusAwardRoutes from "./routes/bonusAward.routes.js";
 
 dotenv.config();
 
@@ -22,7 +25,7 @@ const PORT = process.env.PORT || 5000;
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.urlencoded({extended: true}));
+app.use(express.urlencoded({ extended: true }));
 
 // Swagger setup
 const __filename = fileURLToPath(import.meta.url);
@@ -51,16 +54,19 @@ app.use('/api/files', uploadRoutes);
 app.use('/api/forms', formTemplateRoutes);
 app.use('/api/exports', exportRoutes);
 app.use('/api/records', recordRoutes);
+app.use('/api/quarterly-metrics', quarterlyMetricRoutes);
+app.use('/api/annual-metrics', annualMetricRoutes);
+app.use('/api/bonus-awards', bonusAwardRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
-    res.json({status: 'OK', message: 'Server is running'});
+    res.json({ status: 'OK', message: 'Server is running' });
 });
 
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error(err.stack);
-    res.status(500).json({message: 'Something went wrong!'});
+    res.status(500).json({ message: 'Something went wrong!' });
 });
 
 // Initialize database and start server
