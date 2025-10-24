@@ -18,14 +18,14 @@ export const orgData = {
             { id: 'kh', name: 'Phòng Khách hàng' }
         ],
         'cn6': [
-            { id: 'cn6-kt', name: 'Phòng Kế toán & ngân quỹ' },
-            { id: 'cn6-kh', name: 'Phòng Khách hàng' },
-            { id: 'cn6-gd', name: 'Ban giám đốc' }
+            { id: 'kt', name: 'Phòng Kế toán & ngân quỹ' },
+            { id: 'kh', name: 'Phòng Khách hàng' },
+            { id: 'gd', name: 'Ban giám đốc' }
         ],
         'nh': [
-            { id: 'nh-kt', name: 'Phòng Kế toán & ngân quỹ' },
-            { id: 'nh-kh', name: 'Phòng Khách hàng' },
-            { id: 'nh-gd', name: 'Ban giám đốc' }
+            { id: 'kt', name: 'Phòng Kế toán & ngân quỹ' },
+            { id: 'kh', name: 'Phòng Khách hàng' },
+            { id: 'gd', name: 'Ban giám đốc' }
         ],
     },
     positions: {

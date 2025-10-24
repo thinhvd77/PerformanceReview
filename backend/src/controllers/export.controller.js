@@ -631,35 +631,11 @@ export const createExport = async (req, res) => {
 
 export const listDepartmentSubmissions = async (req, res) => {
     try {
-        // Cho phép trưởng phòng tổng hợp override branch/department qua query params
-        const { manager, branch: userBranch, department: userDepartment } = await getManagerContext(req);
-        let effectiveBranch = userBranch;
-        let effectiveDepartment = userDepartment;
+        // Use getManagerContext with allowDepartmentOverride for TH managers
+        // This handles branch/department validation correctly
+        const { branch, department } = await getManagerContext(req, { allowDepartmentOverride: true });
 
-        // Chỉ cho phép trưởng phòng tổng hợp override
-        const normalizedDepartment = (userDepartment || '').toLowerCase();
-        const isTHManager = normalizedDepartment === 'th';
-        console.log(isTHManager);
-
-
-        if (isTHManager) {
-            const queryBranch = (req.query?.branch || '').toString().trim();
-            console.log(queryBranch);
-
-            const queryDepartment = (req.query?.department || '').toString().trim();
-            console.log(queryDepartment);
-
-            if (queryBranch) {
-                effectiveBranch = queryBranch;
-            }
-
-            if (queryDepartment) {
-                effectiveDepartment = queryDepartment;
-            }
-        }
-        console.log(effectiveDepartment);
-
-        const records = await getLatestRecordsForDepartment(effectiveBranch, effectiveDepartment);
+        const records = await getLatestRecordsForDepartment(branch, department);
 
         const submissions = records.map((record) => ({
             id: record.id,
@@ -671,8 +647,8 @@ export const listDepartmentSubmissions = async (req, res) => {
         }));
 
         return res.json({
-            branch: effectiveBranch,
-            department: effectiveDepartment,
+            branch,
+            department,
             submissions,
         });
     } catch (err) {

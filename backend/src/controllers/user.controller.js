@@ -168,7 +168,7 @@ export const register = async (req, res) => {
 
         res.status(201).json({
             message: 'User created successfully',
-            user: { username: user.username, fullname: user.fullname, branch: user.branch, department: user.department},
+            user: { username: user.username, fullname: user.fullname, branch: user.branch, department: user.department },
         });
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
@@ -193,9 +193,15 @@ export const login = async (req, res) => {
             return res.status(401).json({ message: 'Mật khẩu không đúng' });
         }
 
-        // Generate token
+        // Generate token with branch and department for manager permission checks
         const token = jwt.sign(
-            { id: user.id, username: user.username, role: user.role },
+            {
+                id: user.id,
+                username: user.username,
+                role: user.role,
+                branch: user.branch,
+                department: user.department
+            },
             process.env.JWT_SECRET,
             { expiresIn: '1d' }
         );

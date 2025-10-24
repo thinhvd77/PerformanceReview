@@ -59,14 +59,14 @@ const departmentOptionsByBranch = {
         { value: "kh", label: "Phòng Khách hàng" },
     ],
     cn6: [
-        { value: "cn6-kt", label: "Kế toán & ngân quỹ" },
-        { value: "cn6-kh", label: "Phòng Khách hàng" },
-        { value: "cn6-gd", label: "Ban giám đốc" },
+        { value: "kt", label: "Kế toán & ngân quỹ" },
+        { value: "kh", label: "Phòng Khách hàng" },
+        { value: "gd", label: "Ban giám đốc" },
     ],
     nh: [
-        { value: "nh-kt", label: "Kế toán & ngân quỹ" },
-        { value: "nh-kh", label: "Phòng Khách hàng" },
-        { value: "nh-gd", label: "Ban giám đốc" },
+        { value: "kt", label: "Kế toán & ngân quỹ" },
+        { value: "kh", label: "Phòng Khách hàng" },
+        { value: "gd", label: "Ban giám đốc" },
     ],
 };
 
@@ -87,7 +87,7 @@ const getDepartmentLabel = (branchId, departmentId) => {
 export default function DashboardPage() {
     const { user } = useAuth();
     console.log(user);
-    
+
     const normalizedRole = (user?.role || "").toString().toLowerCase();
     const normalizedDepartment = (user?.department || "")
         .toString()
