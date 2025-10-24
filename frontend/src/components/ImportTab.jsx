@@ -43,10 +43,12 @@ export default function ImportTab() {
         [branchId]
     );
     const [departmentId, setDepartmentId] = useState();
-    const positions = useMemo(
-        () => (departmentId ? orgData.positions[departmentId] || [] : []),
-        [departmentId]
-    );
+    const positions = useMemo(() => {
+        if (!branchId || !departmentId) return [];
+        // Build position key from branch and department (e.g., 'hs-kt', 'cn6-kt')
+        const positionKey = `${branchId}-${departmentId}`;
+        return orgData.positions[positionKey] || [];
+    }, [branchId, departmentId]);
     const [positionId, setPositionId] = useState();
 
     // Multiple groups state
@@ -437,7 +439,7 @@ export default function ImportTab() {
                                         <Tag color="purple">
                                             {findNameById(
                                                 orgData.positions[
-                                                    g.departmentId
+                                                    `${g.branchId}-${g.departmentId}`
                                                 ],
                                                 g.positionId
                                             )}
@@ -509,7 +511,7 @@ export default function ImportTab() {
                                                 <Tag color="purple">
                                                     {findNameById(
                                                         orgData.positions[
-                                                            g.departmentId
+                                                            `${g.branchId}-${g.departmentId}`
                                                         ],
                                                         g.positionId
                                                     )}
@@ -645,8 +647,7 @@ export default function ImportTab() {
                                                                     {findNameById(
                                                                         orgData
                                                                             .positions[
-                                                                            g
-                                                                                .departmentId
+                                                                            `${g.branchId}-${g.departmentId}`
                                                                         ],
                                                                         g.positionId
                                                                     )}
@@ -690,9 +691,7 @@ export default function ImportTab() {
                                                             {findNameById(
                                                                 orgData
                                                                     .positions[
-                                                                    form
-                                                                        .assignedGroup
-                                                                        .departmentId
+                                                                    `${form.assignedGroup.branchId}-${form.assignedGroup.departmentId}`
                                                                 ],
                                                                 form
                                                                     .assignedGroup

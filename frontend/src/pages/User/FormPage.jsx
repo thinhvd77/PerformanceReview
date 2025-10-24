@@ -41,10 +41,12 @@ export default function FormPage() {
         () => (branchId ? orgData.departments[branchId] || [] : []),
         [branchId]
     );
-    const positions = useMemo(
-        () => (departmentId ? orgData.positions[departmentId] || [] : []),
-        [departmentId]
-    );
+    const positions = useMemo(() => {
+        if (!branchId || !departmentId) return [];
+        // Build position key from branch and department (e.g., 'hs-kt', 'cn6-kt')
+        const positionKey = `${branchId}-${departmentId}`;
+        return orgData.positions[positionKey] || [];
+    }, [branchId, departmentId]);
 
     // Persist selection
     useEffect(() => {
