@@ -97,6 +97,7 @@ import {
 import { loadPreviousQuarterData } from "./FormViewer/handlers/quarterlyMetricsHandler.js";
 
 import { handleExportWorkflow } from "./FormViewer/handlers/exportHandler.js";
+import { loadAnnualPlanData } from "./FormViewer/handlers/annualPlanHandler.js";
 
 import { computeRowATotalFormula } from "./FormViewer/handlers/scoreTotalHandler.js";
 
@@ -175,9 +176,76 @@ export default function FormViewer({ formId }) {
         [table, cellInputs, cellMap]
     );
 
-    const handleCellChange = (addr, v) => {
-        setCellInputs((prev) => ({ ...prev, [addr]: v }));
-    };
+    const {
+        scoreColIdx,
+        planColIdx,
+        actualColIdx,
+        noteColIdx,
+        prevActualColIdx,
+        prevPlanColIdx,
+        annualPlanColIdx,
+    } = useColumnIndices(template);
+
+    const manualEditedAddrsRef = useRef(new Set());
+    const annualPlanLoadedRef = useRef("");
+    // Track whether previous-quarter metrics have been loaded for current selection
+    const quarterlyMetricsLoadedRef = useRef("");
+    const previousQuarterYearRef = useRef({
+        quarter: selectedQuarter,
+        year: selectedYear,
+    });
+
+    useEffect(() => {
+        manualEditedAddrsRef.current = new Set();
+        annualPlanLoadedRef.current = "";
+    }, [baseTable]);
+
+    useEffect(() => {
+        const prev = previousQuarterYearRef.current;
+        if (
+            prev.quarter === selectedQuarter &&
+            prev.year === selectedYear
+        ) {
+            return;
+        }
+
+        previousQuarterYearRef.current = {
+            quarter: selectedQuarter,
+            year: selectedYear,
+        };
+
+        if (!table?.rows || table.rows.length === 0) {
+            manualEditedAddrsRef.current = new Set();
+            return;
+        }
+
+        const manualAddrs = manualEditedAddrsRef.current;
+        if (manualAddrs.size > 0) {
+            setCellInputs((prevInputs) => {
+                if (!prevInputs) return prevInputs;
+                const next = { ...prevInputs };
+                manualAddrs.forEach((addr) => {
+                    if (addr && Object.prototype.hasOwnProperty.call(next, addr)) {
+                        delete next[addr];
+                    }
+                });
+                return next;
+            });
+        }
+
+        manualEditedAddrsRef.current = new Set();
+        setCriteriaSelectValueByRow(computeDefaultCriteria(baseTable));
+        annualPlanLoadedRef.current = "";
+    }, [selectedQuarter, selectedYear, baseTable, table]);
+
+    const handleCellChange = useCallback(
+        (addr, v) => {
+            if (!addr) return;
+            manualEditedAddrsRef.current.add(addr);
+            setCellInputs((prev) => ({ ...prev, [addr]: v }));
+        },
+        []
+    );
 
     /**
      * Load previous quarter metrics and auto-populate "Thực hiện quý trước" column
@@ -244,16 +312,87 @@ export default function FormViewer({ formId }) {
         loadData();
     }, [selectedQuarter, selectedYear, tableReady]);
 
-    // ==== Column indices ====
-    const {
-        scoreColIdx,
-        planColIdx,
-        actualColIdx,
-        noteColIdx,
-        prevActualColIdx,
-        prevPlanColIdx,
+    /**
+     * Load saved annual plan ("Kế hoạch năm") values for the active year.
+     * Reloads whenever the year changes or manual values are cleared.
+     */
+    useEffect(() => {
+        if (
+            !tableReady ||
+            !table ||
+            !table.rows ||
+            annualPlanColIdx == null ||
+            annualPlanColIdx < 0 ||
+            !user?.username
+        ) {
+            return;
+        }
+
+        const loadKey = `${user.username}-${selectedYear}`;
+        if (annualPlanLoadedRef.current === loadKey) {
+            return;
+        }
+
+        let cancelled = false;
+        const loadAnnualPlan = async () => {
+            try {
+                const result = await loadAnnualPlanData({
+                    table,
+                    annualPlanColIdx,
+                    selectedYear,
+                    username: user.username,
+                    api,
+                });
+
+                if (!result || cancelled) return;
+
+                if (
+                    result.cellInputsToDelete &&
+                    result.cellInputsToDelete.length > 0
+                ) {
+                    setCellInputs((prev) => {
+                        if (!prev) return prev;
+                        const next = { ...prev };
+                        result.cellInputsToDelete.forEach((addr) => {
+                            delete next[addr];
+                        });
+                        return next;
+                    });
+                }
+
+                if (
+                    result.cellInputsToUpdate &&
+                    Object.keys(result.cellInputsToUpdate).length > 0
+                ) {
+                    setCellInputs((prev) => ({
+                        ...prev,
+                        ...result.cellInputsToUpdate,
+                    }));
+                }
+            } finally {
+                if (!cancelled) {
+                    annualPlanLoadedRef.current = loadKey;
+                }
+            }
+        };
+
+        loadAnnualPlan().catch((err) => {
+            console.warn("Annual plan load failed:", err);
+            if (!cancelled) {
+                annualPlanLoadedRef.current = loadKey;
+            }
+        });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [
+        table,
+        tableReady,
         annualPlanColIdx,
-    } = useColumnIndices(template);
+        selectedYear,
+        user?.username,
+    ]);
 
     useEffect(() => {
         if (scoreColIdx == null) return;
@@ -279,9 +418,6 @@ export default function FormViewer({ formId }) {
         setChildrenScoreAddrs,
         childAddrToParentRow,
     } = useChildrenTracking();
-
-    // Ref to track if quarterly metrics have been loaded for current quarter/year
-    const quarterlyMetricsLoadedRef = useRef("");
 
     // Ref để ngăn AUTO_BONUS_RULES useEffect chạy lại trong khi đang xử lý
     const bonusRulesProcessingRef = useRef(false);
@@ -545,6 +681,7 @@ export default function FormViewer({ formId }) {
         setCriteriaSelectValueByRow(resetState.criteriaSelectValueByRow);
         setCellInputs(resetState.cellInputs);
         setTable(resetState.table);
+        manualEditedAddrsRef.current = new Set();
     };
 
     useEffect(() => {

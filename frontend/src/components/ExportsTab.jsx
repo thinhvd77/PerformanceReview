@@ -26,11 +26,22 @@ const departments = {
     gd: 'Ban giám đốc',
 };
 
+const quarterLabels = {
+    1: 'Quý I',
+    2: 'Quý II',
+    3: 'Quý III',
+    4: 'Quý IV',
+};
+
+const quarterValues = [1, 2, 3, 4];
+
 export default function ExportsTab() {
     const navigate = useNavigate();
     const [q, setQ] = useState('');
-    const [branchFilter, setBranchFilter] = useState('');
-    const [departmentFilter, setDepartmentFilter] = useState('');
+    const [branchFilter, setBranchFilter] = useState(null);
+    const [departmentFilter, setDepartmentFilter] = useState(null);
+    const [quarterFilter, setQuarterFilter] = useState(null);
+    const [yearFilter, setYearFilter] = useState(null);
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
     const [total, setTotal] = useState(0);
@@ -42,21 +53,61 @@ export default function ExportsTab() {
 
     // Extract unique branch and department options from data
     const branchOptions = useMemo(() => {
-        const uniqueBranches = [...new Set(rows.filter(r => r?.branch).map(r => branchs[r.branch] || r.branch))];
-        return uniqueBranches.sort();
-    }, [rows]);
+        const uniqueBranches = new Set();
+        if (branchFilter) uniqueBranches.add(branchFilter);
+        rows.forEach((r) => {
+            if (r?.branch) uniqueBranches.add(r.branch);
+        });
+        return Array.from(uniqueBranches)
+            .map((code) => ({value: code, label: branchs[code] || code}))
+            .sort((a, b) => a.label.localeCompare(b.label, 'vi'));
+    }, [rows, branchFilter]);
 
     const departmentOptions = useMemo(() => {
-        const uniqueDepartments = [...new Set(rows.filter(r => r?.department).map(r => departments[r.department] || r.department))];
-        return uniqueDepartments.sort();
-    }, [rows]);
+        const uniqueDepartments = new Set();
+        if (departmentFilter) uniqueDepartments.add(departmentFilter);
+        rows.forEach((r) => {
+            if (r?.department) uniqueDepartments.add(r.department);
+        });
+        return Array.from(uniqueDepartments)
+            .map((code) => ({value: code, label: departments[code] || code}))
+            .sort((a, b) => a.label.localeCompare(b.label, 'vi'));
+    }, [rows, departmentFilter]);
 
-    const fetchList = async (params = {}) => {
+    const yearOptions = useMemo(() => {
+        const uniqueYears = new Set();
+        if (yearFilter) uniqueYears.add(yearFilter);
+        rows.forEach((r) => {
+            if (r?.year) uniqueYears.add(r.year);
+        });
+        return Array.from(uniqueYears).sort((a, b) => b - a);
+    }, [rows, yearFilter]);
+
+    const fetchList = async (overrides = {}) => {
         setLoading(true);
         try {
-            const {data} = await api.get('/exports', {
-                params: {page, pageSize, q, branchId: branchFilter, departmentId: departmentFilter, ...params},
-            });
+            const hasOverride = (key) => Object.prototype.hasOwnProperty.call(overrides, key);
+            const resolvedPage = hasOverride('page') ? overrides.page : page;
+            const resolvedPageSize = hasOverride('pageSize') ? overrides.pageSize : pageSize;
+            const resolvedQ = hasOverride('q') ? overrides.q : q;
+            const resolvedBranch = hasOverride('branchId') ? overrides.branchId : branchFilter;
+            const resolvedDepartment = hasOverride('departmentId') ? overrides.departmentId : departmentFilter;
+            const resolvedQuarter = hasOverride('quarter') ? overrides.quarter : quarterFilter;
+            const resolvedYear = hasOverride('year') ? overrides.year : yearFilter;
+
+            const params = {
+                page: resolvedPage,
+                pageSize: resolvedPageSize,
+            };
+
+            const trimmedQ = (resolvedQ || '').toString().trim();
+            if (trimmedQ) params.q = trimmedQ;
+            if (resolvedBranch) params.branchId = resolvedBranch;
+            if (resolvedDepartment) params.departmentId = resolvedDepartment;
+            if (resolvedQuarter) params.quarter = resolvedQuarter;
+            if (resolvedYear) params.year = resolvedYear;
+
+            const {data} = await api.get('/exports', {params});
             
             setRows(data?.data || []);
             setTotal(data?.total || 0);
@@ -73,7 +124,7 @@ export default function ExportsTab() {
     useEffect(() => {
         fetchList().then();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [page, pageSize, branchFilter, departmentFilter]);
+    }, [page, pageSize, branchFilter, departmentFilter, quarterFilter, yearFilter]);
 
     const onSearch = () => {
         setPage(1);
@@ -82,10 +133,11 @@ export default function ExportsTab() {
 
     const onClearFilters = () => {
         setQ('');
-        setBranchFilter('');
-        setDepartmentFilter('');
+        setBranchFilter(null);
+        setDepartmentFilter(null);
+        setQuarterFilter(null);
+        setYearFilter(null);
         setPage(1);
-        fetchList({page: 1, q: '', branchId: '', departmentId: ''}).then();
     };
 
     const handleDownload = async (record) => {
@@ -164,6 +216,20 @@ export default function ExportsTab() {
             ),
         },
         {
+            title: 'Quý',
+            dataIndex: 'quarter',
+            width: 120,
+            render: (value) => (
+                value ? <Tag color="purple">{quarterLabels[value] || `Quý ${value}`}</Tag> : '-'
+            ),
+        },
+        {
+            title: 'Năm',
+            dataIndex: 'year',
+            width: 120,
+            render: (value) => value || '-',
+        },
+        {
             title: 'Tạo lúc', 
             dataIndex: 'createdAt', 
             width: 200,
@@ -227,32 +293,71 @@ export default function ExportsTab() {
                             style={{maxWidth: 360}}
                         />
                         <Select
-                            value={branchFilter}
-                            onChange={setBranchFilter}
+                            value={branchFilter ?? undefined}
+                            onChange={(value) => {
+                                setBranchFilter(value ?? null);
+                                setPage(1);
+                            }}
                             placeholder="Lọc theo chi nhánh..."
                             style={{minWidth: 200}}
                             optionFilterProp="children"
                             allowClear
+                            showSearch
                         >
-                            <Select.Option value="">Tất cả chi nhánh</Select.Option>
-                            {branchOptions.map(branch => (
-                                <Select.Option key={branch} value={branch}>
-                                    {branch}
+                            {branchOptions.map((branch) => (
+                                <Select.Option key={branch.value} value={branch.value}>
+                                    {branch.label}
                                 </Select.Option>
                             ))}
                         </Select>
                         <Select
-                            value={departmentFilter}
-                            onChange={setDepartmentFilter}
+                            value={departmentFilter ?? undefined}
+                            onChange={(value) => {
+                                setDepartmentFilter(value ?? null);
+                                setPage(1);
+                            }}
                             placeholder="Lọc theo phòng ban..."
                             style={{minWidth: 200}}
                             optionFilterProp="children"
                             allowClear
+                            showSearch
                         >
-                            <Select.Option value="">Tất cả phòng ban</Select.Option>
-                            {departmentOptions.map(department => (
-                                <Select.Option key={department} value={department}>
-                                    {department}
+                            {departmentOptions.map((department) => (
+                                <Select.Option key={department.value} value={department.value}>
+                                    {department.label}
+                                </Select.Option>
+                            ))}
+                        </Select>
+                        <Select
+                            value={quarterFilter ?? undefined}
+                            onChange={(value) => {
+                                setQuarterFilter(value ?? null);
+                                setPage(1);
+                            }}
+                            placeholder="Lọc theo quý..."
+                            style={{minWidth: 160}}
+                            allowClear
+                        >
+                            {quarterValues.map((quarter) => (
+                                <Select.Option key={quarter} value={quarter}>
+                                    {quarterLabels[quarter] || `Quý ${quarter}`}
+                                </Select.Option>
+                            ))}
+                        </Select>
+                        <Select
+                            value={yearFilter ?? undefined}
+                            onChange={(value) => {
+                                setYearFilter(value ?? null);
+                                setPage(1);
+                            }}
+                            placeholder="Lọc theo năm..."
+                            style={{minWidth: 140}}
+                            allowClear
+                            showSearch
+                        >
+                            {yearOptions.map((year) => (
+                                <Select.Option key={year} value={year}>
+                                    {year}
                                 </Select.Option>
                             ))}
                         </Select>

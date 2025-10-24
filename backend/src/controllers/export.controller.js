@@ -3,6 +3,7 @@ import path from 'path';
 import ExcelJS from 'exceljs';
 import { AppDataSource } from '../config/database.js';
 import { ExportRecord } from '../entities/ExportRecord.js';
+import { BonusAward } from '../entities/BonusAward.js';
 import { User } from '../entities/User.js';
 import { orgData, findNameById } from '../utils/orgData.js';
 
@@ -451,18 +452,44 @@ export const listExports = async (req, res) => {
         const page = Math.max(1, parseInt(req.query.page || '1', 10));
         const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize || '10', 10)));
         const q = (req.query.q || '').toString().trim().toLowerCase();
+        const branchId = req.query.branchId ? req.query.branchId.toString().trim() : '';
+        const departmentId = req.query.departmentId ? req.query.departmentId.toString().trim() : '';
+        const parsedQuarter = parseInt(req.query.quarter, 10);
+        const parsedYear = parseInt(req.query.year, 10);
+        const hasQuarterFilter = Number.isInteger(parsedQuarter) && parsedQuarter >= 1 && parsedQuarter <= 4;
+        const hasYearFilter = Number.isInteger(parsedYear);
 
         const repo = AppDataSource.getRepository(ExportRecord.options.name);
         const qb = repo.createQueryBuilder('e')
             .leftJoinAndSelect('e.employee', 'employee')
-            .orderBy('e.id', 'DESC')
-            .skip((page - 1) * pageSize)
-            .take(pageSize);
+            .where('1=1');
 
         if (q) {
             // match by fileName or meta->employee_name (if driver supports jsonb path, use LIKE on stringified JSON as fallback)
-            qb.where("LOWER(e.fileName) LIKE :q", { q: `%${q}%` });
+            qb.andWhere('LOWER(e.fileName) LIKE :q', { q: `%${q}%` });
         }
+
+        if (branchId) {
+            qb.andWhere('employee.branch = :branchId', { branchId });
+        }
+
+        if (departmentId) {
+            qb.andWhere('employee.department = :departmentId', { departmentId });
+        }
+
+        if (hasQuarterFilter) {
+            qb.andWhere('e.quarter = :quarter', { quarter: parsedQuarter });
+        }
+
+        if (hasYearFilter) {
+            qb.andWhere('e.year = :year', { year: parsedYear });
+        }
+
+        qb.orderBy('e.year', 'DESC')
+            .addOrderBy('e.quarter', 'DESC')
+            .addOrderBy('e.id', 'DESC')
+            .skip((page - 1) * pageSize)
+            .take(pageSize);
 
         const [entities, total] = await qb.getManyAndCount();
 
@@ -476,6 +503,8 @@ export const listExports = async (req, res) => {
                 fileName: item.fileName,
                 filePath: item.filePath,
                 table: item.table,
+                quarter: item.quarter,
+                year: item.year,
                 createdAt: item.createdAt,
                 employee_name: meta.employee_name || employee?.fullname || null,
                 fullname: employee?.fullname ?? null,
@@ -966,6 +995,19 @@ export const deleteExport = async (req, res) => {
                 if (fileErr.code !== 'ENOENT') {
                     console.warn(`Failed to remove export file ${absPath}:`, fileErr);
                 }
+            }
+        }
+
+        if (record.employee_code && record.year && record.quarter) {
+            const bonusRepo = AppDataSource.getRepository(BonusAward.options.name);
+            try {
+                await bonusRepo.delete({
+                    username: record.employee_code,
+                    year: record.year,
+                    quarterAwarded: record.quarter,
+                });
+            } catch (bonusErr) {
+                console.warn('Failed to delete related bonus awards:', bonusErr?.message || bonusErr);
             }
         }
 

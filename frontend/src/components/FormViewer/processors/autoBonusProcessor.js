@@ -450,7 +450,8 @@ export async function processBonusRules({
                 });
                 return { ...row, cells };
             }
-            if (normalizeText(row?.cells?.[0]?.value) === "v" && row?.cells) {
+            // Find parent row by label (not STT) to support different form numbering schemes
+            if (normalizeText(row?.cells?.[1]?.value) === normalizeText("Điểm thưởng (tối đa 05 điểm)") && row?.cells) {
                 const cells = row.cells.map((cell, cIdx) => {
                     if (cIdx === scoreColIdx) {
                         return { ...cell, formula: desiredFormula };
