@@ -8,15 +8,14 @@ import { buildParentFormula } from "../utils/formulaUtils.js";
 
 /**
  * Process AUTO_BONUS_RULES for Section V (Điểm thưởng - bonus points)
- * This is an async function as it fetches cumulative quarterly metrics from backend
+ * This is an async function as it fetches data from backend
  *
  * @param {Object} params - Processing parameters
  * @param {Object} params.table - Current table state
  * @param {Array} params.rules - AUTO_BONUS_RULES array
  * @param {Set} params.ruleKeySet - AUTO_BONUS_RULE_KEY_SET
  * @param {number} params.scoreColIdx - Score column index
- * @param {number} params.annualPlanColIdx - Annual plan column index
- * @param {number} params.actualColIdx - Actual column index (not used but kept for consistency)
+ * @param {number} params.actualColIdx - Actual column index
  * @param {number} params.noteColIdx - Note column index
  * @param {Object} params.childrenScoreAddrs - Children score addresses by parent row index
  * @param {Object} params.cellInputs - Current cell inputs
@@ -24,8 +23,9 @@ import { buildParentFormula } from "../utils/formulaUtils.js";
  * @param {number} params.virtualRowNo - Current virtual row number for generating new addresses
  * @param {number} params.selectedQuarter - Selected quarter (1-4)
  * @param {number} params.selectedYear - Selected year
- * @param {Object} params.api - API instance for fetching quarterly metrics
+ * @param {Object} params.api - API instance for fetching data
  * @param {Function} params.resolveCellNumericValue - Function to resolve cell numeric value
+ * @param {string} params.currentUsername - Current user's username
  * @returns {Promise<Object|null>} State updates or null if no changes
  */
 export async function processBonusRules({
@@ -33,7 +33,6 @@ export async function processBonusRules({
     rules,
     ruleKeySet,
     scoreColIdx,
-    annualPlanColIdx,
     actualColIdx,
     noteColIdx,
     childrenScoreAddrs,
@@ -44,46 +43,55 @@ export async function processBonusRules({
     selectedYear,
     api,
     resolveCellNumericValue,
-    currentUsername, // Add username to check awarded bonuses
+    currentUsername,
 }) {
     // Validation
-    if (
-        !table?.rows ||
-        scoreColIdx == null ||
-        annualPlanColIdx == null ||
-        actualColIdx == null
-    ) {
+    if (!table?.rows || scoreColIdx == null || actualColIdx == null) {
         return null;
     }
 
     const rows = table.rows;
 
+    // Fetch annual plan data from database
+    let annualPlanData = {};
+
+    if (currentUsername && selectedYear) {
+        try {
+            const { data } = await api.get('/annual-plans', {
+                params: { username: currentUsername, year: selectedYear }
+            });
+            if (data?.data) {
+                annualPlanData = data.data;
+            }
+        } catch (err) {
+            // Continue without annual plan data
+        }
+    }
+
+    // Map growth labels to metric keys for annual plan lookup
+    const labelToMetricKey = {
+        "Tăng trưởng nguồn vốn": "capital_growth",
+        "Tăng trưởng dư nợ": "loan_growth",
+        "Thu dịch vụ": "service_revenue",
+        "Thu hồi nợ đã XLRR": "debt_recovery",
+        "Tài chính": "finance",
+    };
+
     // Fetch already awarded bonuses for this user in this year
-    // Map: bonusKey -> quarterAwarded
     const awardedBonusMap = new Map();
     if (currentUsername && selectedYear) {
         try {
-            console.log(`[Bonus Tracking] Fetching awarded bonuses for user: ${currentUsername}, year: ${selectedYear}`);
             const { data } = await api.get('/bonus-awards', {
                 params: { username: currentUsername, year: selectedYear }
             });
-            console.log(`[Bonus Tracking] API Response:`, data);
             if (data?.data && Array.isArray(data.data)) {
                 data.data.forEach(award => {
-                    // Backend returns 'quarter', not 'quarterAwarded'
                     awardedBonusMap.set(award.key, award.quarter);
-                    console.log(`  ✓ Found awarded bonus: ${award.key} in Q${award.quarter}`);
                 });
-                console.log(`[Bonus Tracking] Total awarded bonuses loaded: ${awardedBonusMap.size}`);
-            } else {
-                console.log(`[Bonus Tracking] No bonuses found or invalid response format`);
             }
         } catch (err) {
-            console.error('[Bonus Tracking] Failed to fetch awarded bonuses:', err?.response?.data || err.message);
             // Continue without checking - better to award duplicate than miss valid bonus
         }
-    } else {
-        console.warn('[Bonus Tracking] Missing username or year, cannot fetch bonus awards');
     }
 
     // Find parent row (Section V - "Điểm thưởng (tối đa 05 điểm)")
@@ -174,12 +182,6 @@ export async function processBonusRules({
         const previouslyAwardedQuarter = awardedBonusMap.get(key);
         const wasAlreadyAwarded = previouslyAwardedQuarter !== undefined;
 
-        // Debug log
-        console.log(`[Bonus Rule] Processing "${key}" (${bonusLabel})`);
-        console.log(`  - Already awarded? ${wasAlreadyAwarded ? `Yes, in Q${previouslyAwardedQuarter}` : 'No'}`);
-        console.log(`  - Current quarter: Q${selectedQuarter}`);
-        console.log(`  - Available awards in map:`, Array.from(awardedBonusMap.entries()));
-
         // Support multiple growth labels (array)
         const labels = Array.isArray(growthLabel) ? growthLabel : [growthLabel];
 
@@ -196,17 +198,24 @@ export async function processBonusRules({
 
             if (growthRowIdx === -1) continue;
 
-            // Get annual plan from "Kế hoạch năm" column
-            const annualPlanCell = rows[growthRowIdx]?.cells?.[annualPlanColIdx];
-            const labelAnnualPlan = resolveCellNumericValue(annualPlanCell);
+            // Get annual plan from database using label-to-metric mapping
+            const normalizedLabel = normalizeText(label);
+            const metricKey = Object.entries(labelToMetricKey).find(
+                ([key]) => normalizeText(key) === normalizedLabel
+            )?.[1];
 
-            // Get current quarter's actual from the form (actualColIdx column)
+            // Use annual plan from database
+            let labelAnnualPlan = null;
+            if (metricKey && annualPlanData[metricKey] !== undefined) {
+                const rawValue = annualPlanData[metricKey];
+                // Parse to number to ensure proper comparison
+                const parsed = parseFloat(rawValue);
+                labelAnnualPlan = Number.isFinite(parsed) ? parsed : null;
+            }
+
+            // Get current quarter's actual from the form
             const actualCell = rows[growthRowIdx]?.cells?.[actualColIdx];
             const labelCurrentActual = resolveCellNumericValue(actualCell);
-
-            console.log(`Processing label: ${label}`);
-            console.log(`  Annual Plan: ${labelAnnualPlan}`);
-            console.log(`  Current Quarter Actual: ${labelCurrentActual}`);
 
             // Check if THIS label's current quarter actual meets annual plan
             if (labelAnnualPlan !== null &&
@@ -215,7 +224,6 @@ export async function processBonusRules({
                 labelCurrentActual !== null &&
                 Number.isFinite(labelCurrentActual) &&
                 labelCurrentActual >= labelAnnualPlan) {
-                console.log(`✓ Label "${label}" current quarter meets annual plan!`);
                 // This label meets annual plan, use its values
                 annualPlanValue = labelAnnualPlan;
                 currentQuarterActual = labelCurrentActual;
@@ -230,8 +238,6 @@ export async function processBonusRules({
             Number.isFinite(annualPlanValue) &&
             annualPlanValue !== 0 &&
             Number.isFinite(currentQuarterActual);
-
-        console.log(`Rule ${key}: valid=${valid}, annualPlan=${annualPlanValue}, currentQuarterActual=${currentQuarterActual}`);
 
         // Helper: Remove auto-generated row
         const removeAutoRow = () => {
@@ -285,9 +291,8 @@ export async function processBonusRules({
         if (criteriaMet) {
             if (wasAlreadyAwarded) {
                 // Criteria met but already awarded in previous quarter
-                bonusPoints = 0; // No points awarded
+                bonusPoints = 0;
                 noteText = `Đã được cộng điểm tại Quý ${previouslyAwardedQuarter}`;
-                console.log(`Bonus "${key}" criteria met but already awarded in Q${previouslyAwardedQuarter} - showing with 0 points`);
             } else {
                 // Criteria met and not yet awarded - award full points
                 bonusPoints = fixedPoints;

@@ -21,7 +21,7 @@ const METRIC_TYPES = [
     { key: "finance", label: "Thu tài chính" },
 ];
 
-export default function UserMetricsModal({ open, user, onClose }) {
+export default function QuarterActualModal({ open, user, onClose }) {
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -38,50 +38,27 @@ export default function UserMetricsModal({ open, user, onClose }) {
 
         setLoading(true);
         try {
-            console.log(
-                "Loading metrics for:",
-                user.username,
-                "year:",
-                selectedYear
-            );
+            const metricsRes = await api.get("/annual-metrics", {
+                params: { username: user.username, year: selectedYear },
+            });
 
-            // Load annual plans and quarterly metrics in parallel
-            const [planRes, metricsRes] = await Promise.all([
-                api.get("/annual-plans", {
-                    params: { username: user.username, year: selectedYear },
-                }),
-                api.get("/annual-metrics", {
-                    params: { username: user.username, year: selectedYear },
-                }),
-            ]);
-
-            console.log("Annual plan response:", planRes.data);
-            console.log("Quarterly metrics response:", metricsRes.data);
-
-            const planData = planRes.data?.data || {};
             const metricsData = metricsRes.data?.data || {};
 
-            console.log("Parsed plan data:", planData);
-            console.log("Parsed metrics data:", metricsData);
-
             // Transform data into table rows
-            // Annual plan comes from planData, quarterly actuals from metricsData
             const rows = METRIC_TYPES.map((metric) => ({
                 key: metric.key,
                 metric: metric.label,
-                annualPlan: planData[metric.key] || 0,
                 q1Actual: metricsData[metric.key]?.q1Actual || 0,
                 q2Actual: metricsData[metric.key]?.q2Actual || 0,
                 q3Actual: metricsData[metric.key]?.q3Actual || 0,
                 q4Actual: metricsData[metric.key]?.q4Actual || 0,
             }));
 
-            console.log("Table rows:", rows);
             setDataSource(rows);
         } catch (e) {
-            console.error("Error loading metrics:", e);
+            console.error("Error loading quarterly metrics:", e);
             message.error(
-                e?.response?.data?.message || "Failed to load metrics"
+                e?.response?.data?.message || "Failed to load quarterly metrics"
             );
         } finally {
             setLoading(false);
@@ -93,18 +70,8 @@ export default function UserMetricsModal({ open, user, onClose }) {
 
         setSaving(true);
         try {
-            // Split data into two parts:
-            // 1. Annual plans (annualPlan column)
-            // 2. Quarterly metrics (q1-q4 actual columns)
-
-            const plans = {};
             const metrics = {};
-
             dataSource.forEach((row) => {
-                // Annual plan
-                plans[row.key] = row.annualPlan;
-
-                // Quarterly actuals
                 metrics[row.key] = {
                     q1Actual: row.q1Actual,
                     q2Actual: row.q2Actual,
@@ -113,36 +80,19 @@ export default function UserMetricsModal({ open, user, onClose }) {
                 };
             });
 
-            const planPayload = {
-                username: user.username,
-                year: selectedYear,
-                plans,
-            };
-
-            const metricsPayload = {
+            const payload = {
                 username: user.username,
                 year: selectedYear,
                 metrics,
             };
 
-            console.log("Saving annual plans:", planPayload);
-            console.log("Saving quarterly metrics:", metricsPayload);
-
-            // Save both in parallel
-            const [planRes, metricsRes] = await Promise.all([
-                api.post("/annual-plans", planPayload),
-                api.post("/annual-metrics", metricsPayload),
-            ]);
-
-            console.log("Annual plan save response:", planRes.data);
-            console.log("Quarterly metrics save response:", metricsRes.data);
-
-            message.success("Metrics saved successfully");
+            await api.post("/annual-metrics", payload);
+            message.success("Thực hiện quý đã lưu thành công");
             onClose();
         } catch (e) {
-            console.error("Error saving metrics:", e);
+            console.error("Error saving quarterly metrics:", e);
             message.error(
-                e?.response?.data?.message || "Failed to save metrics"
+                e?.response?.data?.message || "Failed to save quarterly metrics"
             );
         } finally {
             setSaving(false);
@@ -159,31 +109,11 @@ export default function UserMetricsModal({ open, user, onClose }) {
 
     const columns = [
         {
-            title: "",
+            title: "Chỉ tiêu",
             dataIndex: "metric",
             key: "metric",
             width: 200,
             fixed: "left",
-        },
-        {
-            title: "Kế hoạch năm",
-            dataIndex: "annualPlan",
-            key: "annualPlan",
-            width: 150,
-            render: (value, record) => (
-                <InputNumber
-                    value={value}
-                    onChange={(val) =>
-                        handleCellChange(record.key, "annualPlan", val || 0)
-                    }
-                    min={0}
-                    style={{ width: "100%" }}
-                    formatter={(value) =>
-                        `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                    }
-                    parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
-                />
-            ),
         },
         {
             title: "Thực hiện quý 1",
@@ -271,23 +201,23 @@ export default function UserMetricsModal({ open, user, onClose }) {
         <Modal
             title={
                 <Title level={5} style={{ margin: 0 }}>
-                    Quarterly Metrics - {user?.fullname || user?.username}
+                    Thực hiện quý - {user?.fullname || user?.username}
                 </Title>
             }
             open={open}
             onCancel={onClose}
-            width={1000}
+            width={900}
             footer={
                 <Space>
                     <Button onClick={onClose} disabled={saving}>
-                        Cancel
+                        Hủy
                     </Button>
                     <Button
                         type="primary"
                         onClick={handleSave}
                         loading={saving}
                     >
-                        Save
+                        Lưu
                     </Button>
                 </Space>
             }

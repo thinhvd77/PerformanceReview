@@ -16,6 +16,8 @@ import recordRoutes from "./routes/record.routes.js";
 import quarterlyMetricRoutes from "./routes/quarterlyMetric.routes.js";
 import annualMetricRoutes from "./routes/annualMetric.routes.js";
 import bonusAwardRoutes from "./routes/bonusAward.routes.js";
+import annualPlanRoutes from "./routes/annualPlan.routes.js";
+import quarterPlanRoutes from "./routes/quarterPlan.routes.js";
 
 dotenv.config();
 
@@ -57,6 +59,8 @@ app.use('/api/records', recordRoutes);
 app.use('/api/quarterly-metrics', quarterlyMetricRoutes);
 app.use('/api/annual-metrics', annualMetricRoutes);
 app.use('/api/bonus-awards', bonusAwardRoutes);
+app.use('/api/annual-plans', annualPlanRoutes);
+app.use('/api/quarter-plans', quarterPlanRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

@@ -202,10 +202,7 @@ export default function FormViewer({ formId }) {
 
     useEffect(() => {
         const prev = previousQuarterYearRef.current;
-        if (
-            prev.quarter === selectedQuarter &&
-            prev.year === selectedYear
-        ) {
+        if (prev.quarter === selectedQuarter && prev.year === selectedYear) {
             return;
         }
 
@@ -225,7 +222,10 @@ export default function FormViewer({ formId }) {
                 if (!prevInputs) return prevInputs;
                 const next = { ...prevInputs };
                 manualAddrs.forEach((addr) => {
-                    if (addr && Object.prototype.hasOwnProperty.call(next, addr)) {
+                    if (
+                        addr &&
+                        Object.prototype.hasOwnProperty.call(next, addr)
+                    ) {
                         delete next[addr];
                     }
                 });
@@ -238,14 +238,11 @@ export default function FormViewer({ formId }) {
         annualPlanLoadedRef.current = "";
     }, [selectedQuarter, selectedYear, baseTable, table]);
 
-    const handleCellChange = useCallback(
-        (addr, v) => {
-            if (!addr) return;
-            manualEditedAddrsRef.current.add(addr);
-            setCellInputs((prev) => ({ ...prev, [addr]: v }));
-        },
-        []
-    );
+    const handleCellChange = useCallback((addr, v) => {
+        if (!addr) return;
+        manualEditedAddrsRef.current.add(addr);
+        setCellInputs((prev) => ({ ...prev, [addr]: v }));
+    }, []);
 
     /**
      * Load previous quarter metrics and auto-populate "Thực hiện quý trước" column
@@ -386,13 +383,7 @@ export default function FormViewer({ formId }) {
         return () => {
             cancelled = true;
         };
-    }, [
-        table,
-        tableReady,
-        annualPlanColIdx,
-        selectedYear,
-        user?.username,
-    ]);
+    }, [table, tableReady, annualPlanColIdx, selectedYear, user?.username]);
 
     useEffect(() => {
         if (scoreColIdx == null) return;
@@ -607,7 +598,9 @@ export default function FormViewer({ formId }) {
     // AUTO_BONUS_RULES useEffect - Section V (Điểm thưởng)
     useEffect(() => {
         // Prevent re-entry while processing
-        if (bonusRulesProcessingRef.current) return;
+        if (bonusRulesProcessingRef.current) {
+            return;
+        }
         bonusRulesProcessingRef.current = true;
 
         (async () => {
@@ -617,7 +610,6 @@ export default function FormViewer({ formId }) {
                     rules: AUTO_BONUS_RULES,
                     ruleKeySet: AUTO_BONUS_RULE_KEY_SET,
                     scoreColIdx,
-                    annualPlanColIdx,
                     actualColIdx,
                     noteColIdx,
                     childrenScoreAddrs,
@@ -628,7 +620,7 @@ export default function FormViewer({ formId }) {
                     selectedYear,
                     api,
                     resolveCellNumericValue,
-                    currentUsername: user?.username, // Pass username to check awarded bonuses
+                    currentUsername: user?.username,
                 });
 
                 if (!result) return;
@@ -646,7 +638,6 @@ export default function FormViewer({ formId }) {
     }, [
         table,
         scoreColIdx,
-        annualPlanColIdx,
         actualColIdx,
         noteColIdx,
         childrenScoreAddrs,
@@ -656,6 +647,7 @@ export default function FormViewer({ formId }) {
         selectedYear,
         virtualRowNo,
         resolveCellNumericValue,
+        user?.username,
     ]);
 
     const handleExport = async () => {

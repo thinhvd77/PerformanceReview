@@ -4,6 +4,8 @@ import ImportTab from "../../components/ImportTab.jsx";
 import UserManagementTab from "../../components/UserManagementTab.jsx";
 import FormManagementTab from "../../components/FormManagementTab.jsx";
 import ExportsTab from "../../components/ExportsTab.jsx";
+import AnnualPlanImportTab from "../../components/AnnualPlanImportTab.jsx";
+import QuarterPlanImportTab from "../../components/QuarterPlanImportTab.jsx";
 import UserInfo from "../../components/UserInfo";
 import logo from "../../assets/logo_png.png";
 
@@ -99,6 +101,16 @@ export default function AdminPage() {
                             key: "exports",
                             label: "Form đã nộp",
                             children: <ExportsTab />,
+                        },
+                        {
+                            key: "annual-plan",
+                            label: "Kế hoạch năm",
+                            children: <AnnualPlanImportTab />,
+                        },
+                        {
+                            key: "quarter-plan",
+                            label: "Kế hoạch quý",
+                            children: <QuarterPlanImportTab />,
                         },
                     ]}
                 />

@@ -25,7 +25,9 @@ import {
 import { authService } from "../services/authService.js";
 import { userService } from "../services/userService.js";
 import api from "../services/api.js";
-import UserMetricsModal from "./UserMetricsModal.jsx";
+import AnnualPlanModal from "./AnnualPlanModal.jsx";
+import QuarterPlanModal from "./QuarterPlanModal.jsx";
+import QuarterActualModal from "./QuarterActualModal.jsx";
 
 const { Title } = Typography;
 
@@ -80,8 +82,10 @@ export default function UserManagementTab() {
     const [editOpen, setEditOpen] = useState(false);
     const [editing, setEditing] = useState(false);
     const [currentUser, setCurrentUser] = useState(null);
-    const [metricsOpen, setMetricsOpen] = useState(false);
-    const [selectedMetricsUser, setSelectedMetricsUser] = useState(null);
+    const [annualPlanOpen, setAnnualPlanOpen] = useState(false);
+    const [quarterPlanOpen, setQuarterPlanOpen] = useState(false);
+    const [quarterActualOpen, setQuarterActualOpen] = useState(false);
+    const [selectedUser, setSelectedUser] = useState(null);
 
     const handleCreateModalClose = () => {
         if (creating) return;
@@ -172,13 +176,25 @@ export default function UserManagementTab() {
     };
 
     const handleViewMetrics = (user) => {
-        setSelectedMetricsUser(user);
-        setMetricsOpen(true);
+        setSelectedUser(user);
+        setAnnualPlanOpen(true);
     };
 
-    const handleMetricsClose = () => {
-        setMetricsOpen(false);
-        setSelectedMetricsUser(null);
+    const handleViewQuarterPlan = (user) => {
+        setSelectedUser(user);
+        setQuarterPlanOpen(true);
+    };
+
+    const handleViewQuarterActual = (user) => {
+        setSelectedUser(user);
+        setQuarterActualOpen(true);
+    };
+
+    const handleModalClose = () => {
+        setAnnualPlanOpen(false);
+        setQuarterPlanOpen(false);
+        setQuarterActualOpen(false);
+        setSelectedUser(null);
     };
 
     const handleTableChange = (pagination) => {
@@ -241,10 +257,21 @@ export default function UserManagementTab() {
                 <Space>
                     <Button
                         size="small"
-                        icon={<LineChartOutlined />}
                         onClick={() => handleViewMetrics(record)}
                     >
-                        Metrics
+                        Kế hoạch năm
+                    </Button>
+                    <Button
+                        size="small"
+                        onClick={() => handleViewQuarterPlan(record)}
+                    >
+                        Kế hoạch quý
+                    </Button>
+                    <Button
+                        size="small"
+                        onClick={() => handleViewQuarterActual(record)}
+                    >
+                        Thực hiện quý
                     </Button>
                     <Button
                         size="small"
@@ -714,10 +741,20 @@ export default function UserManagementTab() {
                     </Form.Item>
                 </Form>
             </Modal>
-            <UserMetricsModal
-                open={metricsOpen}
-                user={selectedMetricsUser}
-                onClose={handleMetricsClose}
+            <AnnualPlanModal
+                open={annualPlanOpen}
+                user={selectedUser}
+                onClose={handleModalClose}
+            />
+            <QuarterPlanModal
+                open={quarterPlanOpen}
+                user={selectedUser}
+                onClose={handleModalClose}
+            />
+            <QuarterActualModal
+                open={quarterActualOpen}
+                user={selectedUser}
+                onClose={handleModalClose}
             />
         </Space>
     );

@@ -59,7 +59,7 @@ export function findPlanColumnIndex(columns) {
  * @returns {number|null} Column index or null if not found
  */
 export function findActualColumnIndex(columns) {
-    const idx = findColumnIndex(columns, "thuc hien quy nay", true);
+    const idx = findColumnIndex(columns, "thuc hien", true);
     return idx >= 0 ? idx : null;
 }
 
