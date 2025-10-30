@@ -29,7 +29,7 @@
  * Major Effects:
  * 1. Form loading - Loads template from API on mount/ID change
  * 2. Quarter/Year persistence - Saves selection to localStorage
- * 3. Previous quarter data loading - Auto-populates previous quarter metrics
+ * 3. Quarter plan data loading - Auto-populates quarter plan metrics
  * 4. Base score defaults - Applies default score values to score column
  * 5. Row A formula - Computes total score formula (A = I + II + III - IV + V)
  * 6. AUTO_GROWTH_RULES - Processes Section III scoring rules
@@ -40,16 +40,7 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useParams } from "react-router-dom";
 import api from "../services/api.js";
-import {
-    Button,
-    Spin,
-    Alert,
-    Typography,
-    Empty,
-    message,
-    Select,
-    Space,
-} from "antd";
+import { Button, Spin, Alert, Typography, Empty, Select, Space } from "antd";
 import SchemaTable from "./SchemaTable.jsx";
 import {
     buildInitialInputs,
@@ -94,10 +85,8 @@ import {
     handleRemoveChildLogic,
 } from "./FormViewer/handlers/sectionHandlers.js";
 
-import { loadPreviousQuarterData } from "./FormViewer/handlers/quarterlyMetricsHandler.js";
-
 import { handleExportWorkflow } from "./FormViewer/handlers/exportHandler.js";
-import { loadAnnualPlanData } from "./FormViewer/handlers/annualPlanHandler.js";
+import { loadQuarterPlanData } from "./FormViewer/handlers/quarterPlanHandler.js";
 
 import { computeRowATotalFormula } from "./FormViewer/handlers/scoreTotalHandler.js";
 
@@ -168,7 +157,7 @@ export default function FormViewer({ formId }) {
 
     // ⚠️ Giữ dữ liệu cũ, chỉ thêm default cho addr mới khi bảng thay đổi
     useEffect(() => {
-        setCellInputs((prev) => ({ ...buildInitialInputs(table), ...prev }));
+        setCellInputs((prev) => ({ ...prev, ...buildInitialInputs(table) }));
     }, [table]);
 
     const computedByAddr = useMemo(
@@ -187,9 +176,7 @@ export default function FormViewer({ formId }) {
     } = useColumnIndices(template);
 
     const manualEditedAddrsRef = useRef(new Set());
-    const annualPlanLoadedRef = useRef("");
-    // Track whether previous-quarter metrics have been loaded for current selection
-    const quarterlyMetricsLoadedRef = useRef("");
+    const quarterPlanLoadedRef = useRef("");
     const previousQuarterYearRef = useRef({
         quarter: selectedQuarter,
         year: selectedYear,
@@ -197,7 +184,7 @@ export default function FormViewer({ formId }) {
 
     useEffect(() => {
         manualEditedAddrsRef.current = new Set();
-        annualPlanLoadedRef.current = "";
+        quarterPlanLoadedRef.current = "";
     }, [baseTable]);
 
     useEffect(() => {
@@ -235,7 +222,7 @@ export default function FormViewer({ formId }) {
 
         manualEditedAddrsRef.current = new Set();
         setCriteriaSelectValueByRow(computeDefaultCriteria(baseTable));
-        annualPlanLoadedRef.current = "";
+        quarterPlanLoadedRef.current = "";
     }, [selectedQuarter, selectedYear, baseTable, table]);
 
     const handleCellChange = useCallback((addr, v) => {
@@ -245,97 +232,33 @@ export default function FormViewer({ formId }) {
     }, []);
 
     /**
-     * Load previous quarter metrics and auto-populate "Thực hiện quý trước" column
-     * Only loads once per quarter/year combination to prevent spam notifications when table changes
-     */
-    useEffect(() => {
-        // Wait for table to be ready before attempting to load quarterly metrics
-        if (!tableReady || !table || !table.rows || table.rows.length === 0) {
-            return;
-        }
-
-        // Create unique key for current quarter/year combination
-        const currentKey = `${selectedQuarter}-${selectedYear}`;
-
-        // Skip if already loaded for this quarter/year
-        if (quarterlyMetricsLoadedRef.current === currentKey) {
-            return;
-        }
-
-        const loadData = async () => {
-            const result = await loadPreviousQuarterData({
-                table,
-                selectedQuarter,
-                selectedYear,
-                api,
-            });
-
-            if (!result) return;
-
-            // Mark as loaded ONLY after successful load with valid table
-            quarterlyMetricsLoadedRef.current = currentKey;
-
-            // Clear old data from addresses
-            if (
-                result.cellInputsToDelete &&
-                result.cellInputsToDelete.length > 0
-            ) {
-                setCellInputs((prev) => {
-                    const next = { ...prev };
-                    result.cellInputsToDelete.forEach((addr) => {
-                        delete next[addr];
-                    });
-                    return next;
-                });
-            }
-
-            // Apply new updates if any
-            if (
-                result.cellInputsToUpdate &&
-                Object.keys(result.cellInputsToUpdate).length > 0
-            ) {
-                setCellInputs((prev) => ({
-                    ...prev,
-                    ...result.cellInputsToUpdate,
-                }));
-            }
-
-            // Show success message if provided
-            if (result.successMessage) {
-                message.success(result.successMessage);
-            }
-        };
-
-        loadData();
-    }, [selectedQuarter, selectedYear, tableReady]);
-
-    /**
-     * Load saved annual plan ("Kế hoạch năm") values for the active year.
-     * Reloads whenever the year changes or manual values are cleared.
+     * Load saved quarter plan ("Kế hoạch quý") values for the active quarter/year.
+     * Reloads whenever the quarter or year changes or manual values are cleared.
      */
     useEffect(() => {
         if (
             !tableReady ||
             !table ||
             !table.rows ||
-            annualPlanColIdx == null ||
-            annualPlanColIdx < 0 ||
+            planColIdx == null ||
+            planColIdx < 0 ||
             !user?.username
         ) {
             return;
         }
 
-        const loadKey = `${user.username}-${selectedYear}`;
-        if (annualPlanLoadedRef.current === loadKey) {
+        const loadKey = `${user.username}-Q${selectedQuarter}-${selectedYear}`;
+        if (quarterPlanLoadedRef.current === loadKey) {
             return;
         }
 
         let cancelled = false;
-        const loadAnnualPlan = async () => {
+        const loadQuarterPlan = async () => {
             try {
-                const result = await loadAnnualPlanData({
+                const result = await loadQuarterPlanData({
                     table,
-                    annualPlanColIdx,
+                    planColIdx,
+                    selectedQuarter,
                     selectedYear,
                     username: user.username,
                     api,
@@ -368,22 +291,29 @@ export default function FormViewer({ formId }) {
                 }
             } finally {
                 if (!cancelled) {
-                    annualPlanLoadedRef.current = loadKey;
+                    quarterPlanLoadedRef.current = loadKey;
                 }
             }
         };
 
-        loadAnnualPlan().catch((err) => {
-            console.warn("Annual plan load failed:", err);
+        loadQuarterPlan().catch((err) => {
+            console.warn("Quarter plan load failed:", err);
             if (!cancelled) {
-                annualPlanLoadedRef.current = loadKey;
+                quarterPlanLoadedRef.current = loadKey;
             }
         });
 
         return () => {
             cancelled = true;
         };
-    }, [table, tableReady, annualPlanColIdx, selectedYear, user?.username]);
+    }, [
+        table,
+        tableReady,
+        planColIdx,
+        selectedQuarter,
+        selectedYear,
+        user?.username,
+    ]);
 
     useEffect(() => {
         if (scoreColIdx == null) return;

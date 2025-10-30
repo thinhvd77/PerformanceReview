@@ -41,15 +41,13 @@ export function findColumnIndex(columns, pattern, useNormalizedText = false) {
 export function findScoreColumnIndex(columns, fallbackIndex = 6) {
     const idx = findColumnIndex(columns, "điểm theo mức độ hoàn thành", false);
     return idx >= 0 ? idx : fallbackIndex;
-}
-
-/**
+}/**
  * Find "Kế hoạch quý này" column (Current quarter plan)
  * @param {Array} columns - Array of column objects
  * @returns {number|null} Column index or null if not found
  */
 export function findPlanColumnIndex(columns) {
-    const idx = findColumnIndex(columns, "kế hoạch quý này", false);
+    const idx = findColumnIndex(columns, "kế hoạch", false);
     return idx >= 0 ? idx : null;
 }
 

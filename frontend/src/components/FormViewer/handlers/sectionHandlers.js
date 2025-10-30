@@ -106,25 +106,13 @@ export function handleSectionChooseLogic({
             formula: `=MAX(0, 10-(${actualAddr}/${planAddr}*10))`,
             value: "",
         };
-    } else if (isQualitativeCriterion && actualColIdx != null) {
+    } else if (isQualitativeCriterion) {
         // Special handling for qualitative criteria
-        // Create input cell for violation count at "Actual this quarter" column
-        const actualAddr = `${numToCol(actualColIdx + 1)}${virtualRowNo}`;
-
-        newRow.cells[actualColIdx] = {
-            ...newRow.cells[actualColIdx],
-            addr: actualAddr,
-            input: true,
-            value: "",
-        };
-
-        // "Score by completion level" cell is formula: =2*violations
-        // (total minus points, each violation deducts 2 points)
+        // Allow direct input of deduction points at "Score by completion level" column
         newRow.cells[scoreColIdx] = {
             ...newRow.cells[scoreColIdx],
             addr: childScoreAddr,
-            input: false,
-            formula: `=2*${actualAddr}`,
+            input: true,
             value: "",
         };
     } else {

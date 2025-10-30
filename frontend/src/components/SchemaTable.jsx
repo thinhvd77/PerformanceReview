@@ -259,7 +259,7 @@ export default function SchemaTable({
                             const isChildRow = !!(
                                 childScoreAddr &&
                                 childAddrToParentRow[childScoreAddr] !==
-                                undefined
+                                    undefined
                             );
                             return (
                                 <tr key={`r-${rIdx}`}>
@@ -275,8 +275,15 @@ export default function SchemaTable({
                                         const computedVal = addr
                                             ? computedByAddr[addr]
                                             : undefined;
+
+                                        // Check cellInputs first (for loaded data like quarter plans)
+                                        // Then fall back to formula computed value or cell.value
                                         const rawVal =
-                                            cell.formula && addr
+                                            addr &&
+                                            cellInputs[addr] !== undefined &&
+                                            cellInputs[addr] !== ""
+                                                ? cellInputs[addr]
+                                                : cell.formula && addr
                                                 ? computedVal
                                                 : cell.value ?? "";
 
@@ -406,38 +413,38 @@ export default function SchemaTable({
                                                             inputMode="decimal"
                                                             value={
                                                                 buf !==
-                                                                    undefined
+                                                                undefined
                                                                     ? buf
                                                                     : addr
-                                                                        ? (cellInputs[
-                                                                            addr
-                                                                        ] ??
-                                                                            "") ===
-                                                                            ""
-                                                                            ? ""
-                                                                            : // Hiển thị DƯỚI DẠNG % từ ratio đã lưu (vd 0.05 -> "5%")
-                                                                            formatPercentVN(
-                                                                                Number(
-                                                                                    cellInputs[
-                                                                                    addr
-                                                                                    ]
-                                                                                )
-                                                                            )
-                                                                        : ""
+                                                                    ? (cellInputs[
+                                                                          addr
+                                                                      ] ??
+                                                                          "") ===
+                                                                      ""
+                                                                        ? ""
+                                                                        : // Hiển thị DƯỚI DẠNG % từ ratio đã lưu (vd 0.05 -> "5%")
+                                                                          formatPercentVN(
+                                                                              Number(
+                                                                                  cellInputs[
+                                                                                      addr
+                                                                                  ]
+                                                                              )
+                                                                          )
+                                                                    : ""
                                                             }
                                                             onFocus={() => {
                                                                 if (!addr)
                                                                     return;
                                                                 if (
                                                                     editBuf[
-                                                                    addr
+                                                                        addr
                                                                     ] !==
                                                                     undefined
                                                                 )
                                                                     return;
                                                                 const base =
                                                                     cellInputs[
-                                                                    addr
+                                                                        addr
                                                                     ] ?? "";
                                                                 if (base === "")
                                                                     setBuf(
@@ -458,9 +465,9 @@ export default function SchemaTable({
                                                                 // cho phép phẩy/chấm; chặn số âm
                                                                 if (
                                                                     e.key ===
-                                                                    "-" ||
+                                                                        "-" ||
                                                                     e.key ===
-                                                                    "Minus"
+                                                                        "Minus"
                                                                 )
                                                                     e.preventDefault();
                                                             }}
@@ -496,7 +503,7 @@ export default function SchemaTable({
                                                                 const shown =
                                                                     normalizePercentDisplay(
                                                                         editBuf[
-                                                                        addr
+                                                                            addr
                                                                         ] ?? ""
                                                                     );
                                                                 const ratioStr =
@@ -524,7 +531,7 @@ export default function SchemaTable({
                                                                 const shown =
                                                                     normalizePercentDisplay(
                                                                         editBuf[
-                                                                        addr
+                                                                            addr
                                                                         ] ?? ""
                                                                     );
                                                                 const ratioStr =
@@ -563,37 +570,37 @@ export default function SchemaTable({
                                                             inputMode="decimal"
                                                             value={
                                                                 buf !==
-                                                                    undefined
+                                                                undefined
                                                                     ? buf
                                                                     : addr
-                                                                        ? (cellInputs[
-                                                                            addr
-                                                                        ] ??
-                                                                            "") ===
-                                                                            ""
-                                                                            ? ""
-                                                                            : formatNumberVN(
-                                                                                Number(
-                                                                                    cellInputs[
-                                                                                    addr
-                                                                                    ]
-                                                                                )
-                                                                            )
-                                                                        : ""
+                                                                    ? (cellInputs[
+                                                                          addr
+                                                                      ] ??
+                                                                          "") ===
+                                                                      ""
+                                                                        ? ""
+                                                                        : formatNumberVN(
+                                                                              Number(
+                                                                                  cellInputs[
+                                                                                      addr
+                                                                                  ]
+                                                                              )
+                                                                          )
+                                                                    : ""
                                                             }
                                                             onFocus={() => {
                                                                 if (!addr)
                                                                     return;
                                                                 if (
                                                                     editBuf[
-                                                                    addr
+                                                                        addr
                                                                     ] !==
                                                                     undefined
                                                                 )
                                                                     return;
                                                                 const base =
                                                                     cellInputs[
-                                                                    addr
+                                                                        addr
                                                                     ] ?? "";
                                                                 if (base === "")
                                                                     setBuf(
@@ -613,9 +620,9 @@ export default function SchemaTable({
                                                             onKeyDown={(e) => {
                                                                 if (
                                                                     e.key ===
-                                                                    "-" ||
+                                                                        "-" ||
                                                                     e.key ===
-                                                                    "Minus"
+                                                                        "Minus"
                                                                 )
                                                                     e.preventDefault();
                                                             }}
@@ -646,7 +653,7 @@ export default function SchemaTable({
                                                                     return;
                                                                 const raw =
                                                                     editBuf[
-                                                                    addr
+                                                                        addr
                                                                     ] ?? "";
                                                                 const normalized =
                                                                     commitNumber(
@@ -668,7 +675,7 @@ export default function SchemaTable({
                                                                     return;
                                                                 const raw =
                                                                     editBuf[
-                                                                    addr
+                                                                        addr
                                                                     ] ?? "";
                                                                 const normalized =
                                                                     commitNumber(
@@ -703,12 +710,12 @@ export default function SchemaTable({
                                                             value={
                                                                 addr
                                                                     ? editBuf[
-                                                                    addr
-                                                                    ] ??
-                                                                    cellInputs[
-                                                                    addr
-                                                                    ] ??
-                                                                    ""
+                                                                          addr
+                                                                      ] ??
+                                                                      cellInputs[
+                                                                          addr
+                                                                      ] ??
+                                                                      ""
                                                                     : ""
                                                             }
                                                             onChange={(e) =>
@@ -724,7 +731,7 @@ export default function SchemaTable({
                                                                     return;
                                                                 const val =
                                                                     editBuf[
-                                                                    addr
+                                                                        addr
                                                                     ] ??
                                                                     e.target
                                                                         .value ??
@@ -745,7 +752,7 @@ export default function SchemaTable({
                                                                     return;
                                                                 const val =
                                                                     editBuf[
-                                                                    addr
+                                                                        addr
                                                                     ] ??
                                                                     e
                                                                         .currentTarget
@@ -776,7 +783,7 @@ export default function SchemaTable({
                                                         />
                                                     )
                                                 ) : isChildRow &&
-                                                    isCriteriaColumn ? (
+                                                  isCriteriaColumn ? (
                                                     <div
                                                         style={{
                                                             display: "flex",

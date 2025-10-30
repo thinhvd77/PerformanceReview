@@ -53,7 +53,7 @@ export function buildParentFormula(
     // Start with base score, subtract violations (each child is a deduction)
     if (isQualitativeLabel(criteriaLabel)) {
         if (!addrs.length) return `=${effectiveQualitativeBase}`;
-        return `=MAX(${effectiveQualitativeBase}-SUM(${addrs.join(",")}, 0)`;
+        return `=MAX(${effectiveQualitativeBase}-SUM(${addrs.join(",")}), 0)`;
     }
 
     // Discipline criteria (Ý thức chấp hành kỷ luật)
