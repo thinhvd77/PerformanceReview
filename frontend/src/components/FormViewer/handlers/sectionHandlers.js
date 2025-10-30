@@ -115,6 +115,15 @@ export function handleSectionChooseLogic({
             input: true,
             value: "",
         };
+        // Add input cell for notes column
+        if (noteColIdx != null && noteColIdx !== scoreColIdx) {
+            newRow.cells[noteColIdx] = {
+                ...newRow.cells[noteColIdx],
+                addr: `${numToCol(noteColIdx + 1)}${virtualRowNo}`,
+                input: true,
+                value: "",
+            };
+        }
     } else {
         // Normal handling for other criteria
         // "Score by completion level" cell of child row is input with virtual address
