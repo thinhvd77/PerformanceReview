@@ -157,7 +157,17 @@ export default function FormViewer({ formId }) {
 
     // ⚠️ Giữ dữ liệu cũ, chỉ thêm default cho addr mới khi bảng thay đổi
     useEffect(() => {
-        setCellInputs((prev) => ({ ...prev, ...buildInitialInputs(table) }));
+        const newInputs = buildInitialInputs(table);
+        setCellInputs((prev) => {
+            const result = { ...prev };
+            // Chỉ thêm những addr chưa tồn tại, không ghi đè giá trị đã nhập
+            Object.keys(newInputs).forEach((addr) => {
+                if (!(addr in prev)) {
+                    result[addr] = newInputs[addr];
+                }
+            });
+            return result;
+        });
     }, [table]);
 
     const computedByAddr = useMemo(
