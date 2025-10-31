@@ -53,26 +53,34 @@ export default function ExportsTab() {
 
     // Extract unique branch and department options from data
     const branchOptions = useMemo(() => {
-        const uniqueBranches = new Set();
-        if (branchFilter) uniqueBranches.add(branchFilter);
-        rows.forEach((r) => {
-            if (r?.branch) uniqueBranches.add(r.branch);
+        const optionMap = new Map();
+        Object.entries(branchs).forEach(([value, label]) => {
+            optionMap.set(value, label);
         });
-        return Array.from(uniqueBranches)
-            .map((code) => ({value: code, label: branchs[code] || code}))
+        rows.forEach((r) => {
+            if (r?.branch && !optionMap.has(r.branch)) {
+                optionMap.set(r.branch, branchs[r.branch] || r.branch);
+            }
+        });
+        return Array.from(optionMap.entries())
+            .map(([value, label]) => ({value, label}))
             .sort((a, b) => a.label.localeCompare(b.label, 'vi'));
-    }, [rows, branchFilter]);
+    }, [rows]);
 
     const departmentOptions = useMemo(() => {
-        const uniqueDepartments = new Set();
-        if (departmentFilter) uniqueDepartments.add(departmentFilter);
-        rows.forEach((r) => {
-            if (r?.department) uniqueDepartments.add(r.department);
+        const optionMap = new Map();
+        Object.entries(departments).forEach(([value, label]) => {
+            optionMap.set(value, label);
         });
-        return Array.from(uniqueDepartments)
-            .map((code) => ({value: code, label: departments[code] || code}))
+        rows.forEach((r) => {
+            if (r?.department && !optionMap.has(r.department)) {
+                optionMap.set(r.department, departments[r.department] || r.department);
+            }
+        });
+        return Array.from(optionMap.entries())
+            .map(([value, label]) => ({value, label}))
             .sort((a, b) => a.label.localeCompare(b.label, 'vi'));
-    }, [rows, departmentFilter]);
+    }, [rows]);
 
     const yearOptions = useMemo(() => {
         const uniqueYears = new Set();

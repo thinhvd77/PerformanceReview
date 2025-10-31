@@ -45,7 +45,7 @@ export const AUTO_MINUS_RULES = [
         growthLabel: "Nợ nhóm 2",
         bonusLabel: "Tỷ lệ nợ nhóm 2 tăng trong Quý",
         key: "loan-group-2-minus",
-        fixedPoints: -2, // Fixed -2 points if increased
+        fixedPoints: -1, // Fixed -2 points if increased
     },
     {
         growthLabel: "Nợ xấu",

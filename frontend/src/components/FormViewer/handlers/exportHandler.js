@@ -43,8 +43,10 @@ export function extractUserMetadata(user) {
         departmentId = localStorage.getItem("ufp.departmentId") || "";
         positionId = localStorage.getItem("ufp.positionId") || "";
 
-        if (departmentId && positionId) {
-            const positions = orgData.positions?.[departmentId] || [];
+        if (branchId && departmentId && positionId) {
+            // Build full position key (e.g., "hs-kt") from branch and department
+            const positionKey = `${branchId}-${departmentId}`;
+            const positions = orgData.positions?.[positionKey] || [];
             role = findNameById(positions, positionId) || "";
 
             // Extract role prefix before hyphen if exists
@@ -60,7 +62,7 @@ export function extractUserMetadata(user) {
         employee_name,
         role,
         branchId,
-        departmentId: departmentId.split("-")[1] || departmentId,
+        departmentId,
         positionId,
     };
 }
