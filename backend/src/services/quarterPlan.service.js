@@ -229,8 +229,8 @@ export const saveQuarterPlan = async (req, res) => {
             // Update existing
             plan.capital_growth_plan = plans.capital_growth || 0;
             plan.loan_growth_plan = plans.loan_growth || 0;
-            plan.group_2_loan_ratio_plan = plans.group_2_loan_ratio || 0;
-            plan.bad_loan_ratio_plan = plans.bad_loan_ratio || 0;
+            plan.group_2_loan_ratio_plan = plans.group_2_loan_ratio/100 || 0;
+            plan.bad_loan_ratio_plan = plans.bad_loan_ratio/100 || 0;
             plan.service_revenue_plan = plans.service_revenue || 0;
             plan.debt_recovery_plan = plans.debt_recovery || 0;
             plan.credit_marketing_plan = plans.credit_marketing || 0;
@@ -242,8 +242,8 @@ export const saveQuarterPlan = async (req, res) => {
                 year: parseInt(year),
                 capital_growth_plan: plans.capital_growth || 0,
                 loan_growth_plan: plans.loan_growth || 0,
-                group_2_loan_ratio_plan: plans.group_2_loan_ratio || 0,
-                bad_loan_ratio_plan: plans.bad_loan_ratio || 0,
+                group_2_loan_ratio_plan: plans.group_2_loan_ratio/100 || 0,
+                bad_loan_ratio_plan: plans.bad_loan_ratio/100 || 0,
                 service_revenue_plan: plans.service_revenue || 0,
                 debt_recovery_plan: plans.debt_recovery || 0,
                 credit_marketing_plan: plans.credit_marketing || 0,

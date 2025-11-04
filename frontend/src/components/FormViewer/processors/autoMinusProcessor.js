@@ -145,8 +145,6 @@ export function processMinusRules({
 
         // Special handling for QuarterActual-based rules
         if (useQuarterActual && fieldName) {
-            console.log(`🔍 [MINUS ${key}] Processing QuarterActual-based rule for "${growthLabel}"`);
-
             // Get current quarter actual from form
             const growthRowIdx = findRowIndexByCriteria(rows, growthLabel, 1, true);
 
@@ -159,20 +157,6 @@ export function processMinusRules({
                 const previousActual = previousActualRaw !== null && previousActualRaw !== undefined
                     ? Number(previousActualRaw)
                     : null;
-
-                console.log(`📊 [MINUS ${key}] Current actual from form:`, {
-                    value: currentActual,
-                    type: typeof currentActual,
-                    isFinite: Number.isFinite(currentActual),
-                });
-
-                console.log(`📊 [MINUS ${key}] Previous actual from API (${fieldName}):`, {
-                    rawValue: previousActualRaw,
-                    rawType: typeof previousActualRaw,
-                    parsedValue: previousActual,
-                    parsedType: typeof previousActual,
-                    isFinite: Number.isFinite(previousActual),
-                });
 
                 if (
                     currentActual !== null &&
@@ -191,19 +175,10 @@ export function processMinusRules({
                         if (planValue !== null && Number.isFinite(planValue) && planValue !== 0) {
                             const increased = currentActual > planValue;
 
-                            console.log(`🧮 [MINUS ${key}] Fixed points comparison:`, {
-                                current: currentActual,
-                                plan: planValue,
-                                increased: increased,
-                            });
-
                             if (increased) {
                                 minusPoints = Math.abs(fixedPoints);
                                 const increaseRatio = (currentActual - planValue) / Math.abs(planValue);
                                 noteText = `Tăng ${formatPercentVi(increaseRatio)}`;
-                                console.log(`✅ [MINUS ${key}] Applied ${minusPoints} points for increase`);
-                            } else {
-                                console.log(`❌ [MINUS ${key}] No points - no increase detected`);
                             }
                         }
                     }
@@ -215,33 +190,16 @@ export function processMinusRules({
                                 ? (previousActual - currentActual) / Math.abs(previousActual)
                                 : 0;
 
-                            console.log(`🧮 [MINUS ${key}] Step-based comparison:`, {
-                                previous: previousActual,
-                                current: currentActual,
-                                negativeRatio: negativeRatio,
-                                isDecrease: negativeRatio > 0,
-                            });
-
                             if (negativeRatio > 0) {
                                 const absStep = Math.abs(step);
                                 const rawPoints = Math.floor((negativeRatio + 1e-9) / absStep);
                                 const absMaxPoints = Math.abs(maxPoints);
                                 minusPoints = Math.min(absMaxPoints, rawPoints);
                                 noteText = `Giảm ${formatPercentVi(negativeRatio)} so với Q${previousQuarterActuals.previous_quarter}`;
-                                console.log(`✅ [MINUS ${key}] Applied ${minusPoints} points for decrease`);
-                            } else {
-                                console.log(`❌ [MINUS ${key}] No points - no decrease detected`);
                             }
                         }
                     }
-                } else {
-                    console.log(`⚠️ [MINUS ${key}] Invalid data - cannot compare:`, {
-                        currentValid: currentActual !== null && currentActual !== undefined && Number.isFinite(currentActual),
-                        previousValid: previousActual !== null && previousActual !== undefined && Number.isFinite(previousActual),
-                    });
                 }
-            } else {
-                console.log(`⚠️ [MINUS ${key}] Row not found for "${growthLabel}"`);
             }
         } else {
             // Original logic for rules not using QuarterActual

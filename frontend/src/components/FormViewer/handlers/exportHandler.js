@@ -158,6 +158,24 @@ export function extractUserMetadata(user) {
 }
 
 /**
+ * Sanitizes username for safe filename usage
+ * Removes Vietnamese diacritics and special characters
+ * 
+ * @param {string} username - Raw username
+ * @returns {string} Sanitized username safe for filenames
+ */
+function sanitizeUsername(username) {
+    return String(username || '')
+        .trim()
+        .normalize('NFD') // Decompose Vietnamese characters
+        .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+        .replace(/^_+|_+$/g, '') // Remove leading/trailing underscores
+        .replace(/đ/g, "d").replace(/Đ/g, "D")
+        .replace(/[^a-zA-Z0-9-_]+/g, '_')
+        || 'user';
+}
+
+/**
  * Generates standardized file name for export
  * 
  * @param {number} selectedQuarter - Quarter number (1-4)
@@ -165,9 +183,11 @@ export function extractUserMetadata(user) {
  * @param {string} username - Username from user object
  * @returns {string} Standardized file name with date
  */
-export function generateExportFileName(selectedQuarter, selectedYear, username) {
+export function generateExportFileName(selectedQuarter, selectedYear, employee_code, fullname) {
     const dateStr = new Date().toISOString().slice(0, 10);
-    return `Phieu_tu_danh_gia_Q${selectedQuarter}_${selectedYear}_${username}_${dateStr}.xlsx`;
+    const sanitizedFullname = sanitizeUsername(fullname);
+
+    return `Phieu_tu_danh_gia_Q${selectedQuarter}_${selectedYear}_${employee_code}_${sanitizedFullname}_${dateStr}.xlsx`;
 }
 
 /**
@@ -355,11 +375,11 @@ export async function recordAwardedBonuses({
 
         // If no bonuses awarded, skip
         if (bonusKeys.length === 0) {
-            console.log('No bonus rows found in form - skipping bonus awards recording');
+            // console.log('No bonus rows found in form - skipping bonus awards recording');
             return;
         }
 
-        console.log(`Recording ${bonusKeys.length} bonus awards:`, bonusKeys);
+        // console.log(`Recording ${bonusKeys.length} bonus awards:`, bonusKeys);
 
         // Record all bonuses in batch
         await api.post('/bonus-awards/batch', {
@@ -369,7 +389,7 @@ export async function recordAwardedBonuses({
             bonusKeys,
         });
 
-        console.log('Bonus awards recorded successfully');
+        // console.log('Bonus awards recorded successfully');
     } catch (err) {
         console.warn('Failed to record bonus awards:', err?.response?.data || err.message);
         // Non-fatal - don't block export workflow
@@ -450,7 +470,8 @@ export async function handleExportWorkflow({
         const fileName = generateExportFileName(
             selectedQuarter,
             selectedYear,
-            user.username
+            user.username,
+            user.fullname,
         );
 
         // Step 3: Generate Excel buffer

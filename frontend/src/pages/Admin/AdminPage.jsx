@@ -7,6 +7,7 @@ import FormManagementTab from "../../components/FormManagementTab.jsx";
 import ExportsTab from "../../components/ExportsTab.jsx";
 import AnnualPlanImportTab from "../../components/AnnualPlanImportTab.jsx";
 import QuarterPlanImportTab from "../../components/QuarterPlanImportTab.jsx";
+import ActivityLogsTab from "../../components/ActivityLogsTab.jsx";
 import UserInfo from "../../components/UserInfo";
 import logo from "../../assets/logo_png.png";
 
@@ -120,6 +121,11 @@ export default function AdminPage() {
                             key: "quarter-plan",
                             label: "Kế hoạch quý",
                             children: <QuarterPlanImportTab />,
+                        },
+                        {
+                            key: "activity-logs",
+                            label: "Lịch sử hoạt động",
+                            children: <ActivityLogsTab />,
                         },
                     ]}
                 />

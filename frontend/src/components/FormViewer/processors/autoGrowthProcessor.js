@@ -140,8 +140,6 @@ export function processGrowthRules({
 
         // Special handling for QuarterActual-based rules (Nợ xấu, Nợ nhóm 2)
         if (useQuarterActual && fieldName) {
-            console.log(`🔍 [${key}] Processing QuarterActual-based rule for "${growthLabel}"`);
-
             // Get current quarter actual from form
             const growthRowIdx = findRowIndexByCriteria(rows, growthLabel, 1, true);
 
@@ -154,25 +152,6 @@ export function processGrowthRules({
                 const previousActual = previousActualRaw !== null && previousActualRaw !== undefined
                     ? Number(previousActualRaw)
                     : null;
-
-                console.log(`📊 [${key}] Current actual from form:`, {
-                    value: currentActual,
-                    type: typeof currentActual,
-                    isFinite: Number.isFinite(currentActual),
-                    cellValue: actualCell?.value,
-                    cellInput: actualCell?.input,
-                });
-
-                console.log(`📊 [${key}] Previous actual from API (${fieldName}):`, {
-                    rawValue: previousActualRaw,
-                    rawType: typeof previousActualRaw,
-                    parsedValue: previousActual,
-                    parsedType: typeof previousActual,
-                    isFinite: Number.isFinite(previousActual),
-                    rawData: previousQuarterActuals?.actuals,
-                    quarter: previousQuarterActuals?.previous_quarter,
-                    year: previousQuarterActuals?.previous_year,
-                });
 
                 if (
                     currentActual !== null &&
@@ -187,31 +166,15 @@ export function processGrowthRules({
                     // Calculate decrease (previous - current)
                     const decrease = previousActual - currentActual;
 
-                    console.log(`🧮 [${key}] Comparison:`, {
-                        previous: previousActual,
-                        current: currentActual,
-                        decrease: decrease,
-                        isDecrease: decrease > 0,
-                    });
-
                     // Award points if decreased (decrease > 0)
                     if (decrease > 0) {
                         bonusPoints = rule.fixedPoints || 0;
-                        noteText = `Giảm từ ${previousActual*100}% (Q${previousQuarterActuals.previous_quarter}) xuống ${currentActual*100}%`;
-                        console.log(`✅ [${key}] Awarded ${bonusPoints} points for decrease`);
+                        noteText = `Giảm từ ${previousActual * 100}% (Q${previousQuarterActuals.previous_quarter}) xuống ${currentActual * 100}%`;
                     } else {
                         bonusPoints = 0;
                         noteText = "";
-                        console.log(`❌ [${key}] No points - no decrease detected`);
                     }
-                } else {
-                    console.log(`⚠️ [${key}] Invalid data - cannot compare:`, {
-                        currentValid: currentActual !== null && currentActual !== undefined && Number.isFinite(currentActual),
-                        previousValid: previousActual !== null && previousActual !== undefined && Number.isFinite(previousActual),
-                    });
                 }
-            } else {
-                console.log(`⚠️ [${key}] Row not found for "${growthLabel}"`);
             }
         } else {
             // Original logic for other rules

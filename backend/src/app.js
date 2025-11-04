@@ -12,6 +12,7 @@ import bonusAwardRoutes from "./routes/bonusAward.routes.js";
 import annualPlanRoutes from "./routes/annualPlan.routes.js";
 import quarterPlanRoutes from "./routes/quarterPlan.routes.js";
 import quarterActualRoutes from "./routes/quarterActual.routes.js";
+import activityLogRoutes from "./routes/activityLog.routes.js";
 
 dotenv.config();
 
@@ -33,6 +34,7 @@ app.use('/api/bonus-awards', bonusAwardRoutes);
 app.use('/api/annual-plans', annualPlanRoutes);
 app.use('/api/quarter-plans', quarterPlanRoutes);
 app.use('/api/quarter-actuals', quarterActualRoutes);
+app.use('/api/activity-logs', activityLogRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
@@ -76,4 +78,3 @@ AppDataSource.initialize()
     .catch((error) => {
         console.error('Database connection failed:', error);
     });
-    

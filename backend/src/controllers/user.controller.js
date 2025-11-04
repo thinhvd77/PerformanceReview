@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { AppDataSource } from '../config/database.js';
 import { User } from '../entities/User.js';
+import { logActivity } from '../services/activityLog.service.js';
 
 const userRepository = AppDataSource.getRepository(User);
 
@@ -204,6 +205,20 @@ export const login = async (req, res) => {
             },
             process.env.JWT_SECRET,
             { expiresIn: '1d' }
+        );
+
+        // Log successful login activity
+        await logActivity(
+            user.id,
+            user.username,
+            'LOGIN',
+            {
+                fullname: user.fullname,
+                role: user.role,
+                branch: user.branch,
+                department: user.department,
+            },
+            req
         );
 
         res.json({

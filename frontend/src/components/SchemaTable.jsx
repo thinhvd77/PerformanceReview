@@ -1,5 +1,5 @@
 // SchemaTable.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Input, Divider, Select } from "antd";
 import { EditOutlined } from "@ant-design/icons";
 
@@ -49,6 +49,14 @@ export default function SchemaTable({
             const { [addr]: _, ...rest } = prev;
             return rest;
         });
+
+    // Clear edit buffer when cellInputs is reset (e.g., form clear/reset)
+    useEffect(() => {
+        const cellInputsSize = Object.keys(cellInputs || {}).length;
+        if (cellInputsSize === 0) {
+            setEditBuf({});
+        }
+    }, [cellInputs]);
 
     const norm = (s) =>
         String(s || "")
@@ -177,11 +185,24 @@ export default function SchemaTable({
         const original = String(raw);
         let s = original.trim();
         if (!s) return "";
+
+        // Handle VN vs EN number formats
         if (s.includes(",") && !s.includes(".")) {
+            // VN format: "1.000,5" → remove dots (thousand sep), replace comma with dot (decimal)
             s = s.replace(/\./g, "").replace(",", ".");
+        } else if (s.includes(".") && !s.includes(",")) {
+            // Only dots, no commas - could be VN thousand separator OR EN decimal
+            const dotCount = (s.match(/\./g) || []).length;
+            if (dotCount > 1) {
+                // Multiple dots → VN thousand separator, remove all dots
+                s = s.replace(/\./g, "");
+            }
+            // Single dot → keep as EN decimal point
         } else {
+            // Has both or has comma → assume EN format, remove commas (thousand sep)
             s = s.replace(/,/g, "");
         }
+
         if (/^\d+[.,]$/.test(original)) return original; // đang gõ
         const keep = s.replace(/[^0-9.]/g, "");
         if (!keep || keep === ".") return "";
@@ -517,11 +538,19 @@ export default function SchemaTable({
                                                                         addr,
                                                                         ratioStr
                                                                     );
-                                                                // giữ lại buffer để "nhập sao → hiện vậy"
-                                                                setBuf(
-                                                                    addr,
-                                                                    shown
-                                                                );
+                                                                // Clear buffer if empty to avoid stale "%" display
+                                                                if (
+                                                                    shown === ""
+                                                                ) {
+                                                                    clearBuf(
+                                                                        addr
+                                                                    );
+                                                                } else {
+                                                                    setBuf(
+                                                                        addr,
+                                                                        shown
+                                                                    );
+                                                                }
                                                             }}
                                                             onPressEnter={(
                                                                 e
@@ -545,10 +574,19 @@ export default function SchemaTable({
                                                                         addr,
                                                                         ratioStr
                                                                     );
-                                                                setBuf(
-                                                                    addr,
-                                                                    shown
-                                                                );
+                                                                // Clear buffer if empty to avoid stale "%" display
+                                                                if (
+                                                                    shown === ""
+                                                                ) {
+                                                                    clearBuf(
+                                                                        addr
+                                                                    );
+                                                                } else {
+                                                                    setBuf(
+                                                                        addr,
+                                                                        shown
+                                                                    );
+                                                                }
                                                                 if (
                                                                     e &&
                                                                     e.currentTarget

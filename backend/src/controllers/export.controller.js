@@ -6,6 +6,7 @@ import { ExportRecord } from '../entities/ExportRecord.js';
 import { BonusAward } from '../entities/BonusAward.js';
 import { User } from '../entities/User.js';
 import { orgData, findNameById } from '../utils/orgData.js';
+import { logActivity } from '../services/activityLog.service.js';
 
 const ensureDir = (dir) => {
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
@@ -27,14 +28,15 @@ const getCurrentQuarterYear = () => {
 };
 
 // Helper function to create organized directory structure
-const createExportDirectory = (year, quarter) => {
+const createExportDirectory = (year, quarter, branch, department) => {
     const yearDir = path.join(EXPORT_DIR, year.toString());
     const quarterDir = path.join(yearDir, `Q${quarter}`);
+    const branchDir = path.join(quarterDir, branch);
+    const departmentDir = path.join(branchDir, department);
 
-    ensureDir(yearDir);
-    ensureDir(quarterDir);
+    ensureDir(departmentDir);
 
-    return quarterDir;
+    return departmentDir;
 };
 
 // Helper function to generate clean filename with employee info
@@ -44,7 +46,7 @@ const generateExportFileName = (originalFileName, employeeCode, employeeName, qu
 
     // Create clean employee identifier
     const cleanEmployeeName = employeeName
-        ? employeeName.replace(/[^a-zA-Z0-9_\-]/g, '_').replace(/_+/g, '_')
+        ? employeeName.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, "d").replace(/Đ/g, "D").replace(/^_+|_+$/g, '').replace(/[^a-zA-Z0-9-_]+/g, '_')
         : employeeCode;
 
     // Generate timestamp
@@ -555,10 +557,25 @@ export const createExport = async (req, res) => {
         // Fetch employee information for filename generation
         const userRepo = AppDataSource.getRepository(User.options.name);
         const employee = await userRepo.findOne({ where: { username: employee_code } });
-        const employeeName = employee?.fullname || employee_code;
 
-        // Create organized directory structure
-        const quarterDir = createExportDirectory(year, quarter);
+        if (!employee) {
+            return res.status(404).json({ message: 'Employee not found' });
+        }
+
+        const employeeName = employee.fullname || employee_code;
+        const employeeBranch = employee.branch;
+        const employeeDepartment = employee.department;
+
+        // Validate branch and department
+        if (!employeeBranch || !employeeDepartment) {
+            return res.status(400).json({
+                message: 'Employee must have branch and department assigned',
+                employee_code
+            });
+        }
+
+        // Create organized directory structure with branch/department
+        const quarterDir = createExportDirectory(year, quarter, employeeBranch, employeeDepartment);
 
         // Generate clean filename with employee info, including quarter and year
         const originalFileName = fileName && typeof fileName === 'string' ? fileName : (file.originalname || file.filename);
@@ -615,6 +632,24 @@ export const createExport = async (req, res) => {
             year: year,
         });
         const saved = await repo.save(entity);
+
+        // Log export form activity
+        await logActivity(
+            employee.id,
+            employee_code,
+            'EXPORT_FORM',
+            {
+                formId: formId ? parseInt(formId, 10) : null,
+                quarter,
+                year,
+                fileName: organizedFileName,
+                replaced: !!existingRecord,
+                fullname: employeeName,
+                branch: employeeBranch,
+                department: employeeDepartment,
+            },
+            req
+        );
 
         const message = existingRecord
             ? `Form đã được cập nhật thành công (thay thế form Quý ${quarter} năm ${year})`

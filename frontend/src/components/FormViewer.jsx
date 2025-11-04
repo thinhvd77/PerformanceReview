@@ -216,22 +216,9 @@ export default function FormViewer({ formId }) {
             return;
         }
 
-        const manualAddrs = manualEditedAddrsRef.current;
-        if (manualAddrs.size > 0) {
-            setCellInputs((prevInputs) => {
-                if (!prevInputs) return prevInputs;
-                const next = { ...prevInputs };
-                manualAddrs.forEach((addr) => {
-                    if (
-                        addr &&
-                        Object.prototype.hasOwnProperty.call(next, addr)
-                    ) {
-                        delete next[addr];
-                    }
-                });
-                return next;
-            });
-        }
+        // Clear ALL cellInputs when quarter/year changes to ensure clean state
+        // The quarterPlan effect will reload appropriate data after this
+        setCellInputs({});
 
         manualEditedAddrsRef.current = new Set();
         setCriteriaSelectValueByRow(computeDefaultCriteria(baseTable));
