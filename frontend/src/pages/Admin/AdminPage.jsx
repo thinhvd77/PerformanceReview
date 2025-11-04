@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Tabs, Layout, Typography, Space, Image } from "antd";
+import { useLocation } from "react-router-dom";
 import ImportTab from "../../components/ImportTab.jsx";
 import UserManagementTab from "../../components/UserManagementTab.jsx";
 import FormManagementTab from "../../components/FormManagementTab.jsx";
@@ -13,7 +14,15 @@ const { Content, Header } = Layout;
 const { Title } = Typography;
 
 export default function AdminPage() {
+    const location = useLocation();
     const [activeKey, setActiveKey] = useState("import");
+
+    // Set active tab from navigation state (e.g., when returning from SavedExportViewer)
+    useEffect(() => {
+        if (location.state?.activeTab) {
+            setActiveKey(location.state.activeTab);
+        }
+    }, [location.state]);
 
     return (
         <Layout style={{ minHeight: "100vh" }}>

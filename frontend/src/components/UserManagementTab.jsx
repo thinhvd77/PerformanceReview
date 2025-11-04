@@ -558,12 +558,17 @@ export default function UserManagementTab() {
                         <Select
                             placeholder="-- Chọn vai trò --"
                             options={[
-                                { value: "admin", label: "Admin" },
+                                { value: "director", label: "Giám đốc" },
+                                {
+                                    value: "deputy_director",
+                                    label: "Phó giám đốc",
+                                },
+                                { value: "manager", label: "Trưởng phòng" },
+                                { value: "deputy_manager", label: "Phó phòng" },
                                 {
                                     value: "employee",
                                     label: "Nhân viên",
                                 },
-                                { value: "manager", label: "Quản lý" },
                             ]}
                             style={{ maxWidth: 240 }}
                         />

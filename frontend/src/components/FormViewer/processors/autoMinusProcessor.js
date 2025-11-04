@@ -24,6 +24,9 @@ import { buildParentFormula } from "../utils/formulaUtils.js";
  * @param {Object} params.computedByAddr - Computed values by address
  * @param {number} params.virtualRowNo - Current virtual row number for generating new addresses
  * @param {Function} params.resolveCellNumericValue - Function to resolve cell numeric value
+ * @param {Object} params.previousQuarterActuals - Previous quarter actuals data from API (optional)
+ * @param {number} params.selectedQuarter - Selected quarter (1-4)
+ * @param {number} params.selectedYear - Selected year
  * @returns {Object|null} State updates or null if no changes
  */
 export function processMinusRules({
@@ -41,6 +44,9 @@ export function processMinusRules({
     computedByAddr,
     virtualRowNo,
     resolveCellNumericValue,
+    previousQuarterActuals,
+    selectedQuarter,
+    selectedYear,
 }) {
     // Validation
     if (
@@ -127,98 +133,255 @@ export function processMinusRules({
 
     // Process a single minus rule
     const processMinusRule = (rule) => {
-        const { growthLabel, bonusLabel, key, fixedPoints, step, maxPoints } =
+        const { growthLabel, bonusLabel, key, fixedPoints, step, maxPoints, useQuarterActual, fieldName } =
             rule;
         const autoInfo = autoRowsByKey.get(key) || null;
         const autoRowIdx = autoInfo?.idx ?? -1;
         const autoAddr = autoInfo?.row?.cells?.[scoreColIdx]?.addr || null;
         const otherAutoAddrs = otherAutoAddrsFor(key);
 
-        // Find growth row by criteria
-        const growthRowIdx = findRowIndexByCriteria(rows, growthLabel, 1, true);
+        let minusPoints = 0;
+        let noteText = "";
 
-        let planValue = null;
-        let actualValue = null;
-        let prevActualValue = null;
+        // Special handling for QuarterActual-based rules
+        if (useQuarterActual && fieldName) {
+            console.log(`🔍 [MINUS ${key}] Processing QuarterActual-based rule for "${growthLabel}"`);
 
-        if (growthRowIdx !== -1) {
-            const planCell = rows[growthRowIdx]?.cells?.[planColIdx];
-            const actualCell = rows[growthRowIdx]?.cells?.[actualColIdx];
-            const prevActualCell =
-                prevActualColIdx != null
-                    ? rows[growthRowIdx]?.cells?.[prevActualColIdx]
+            // Get current quarter actual from form
+            const growthRowIdx = findRowIndexByCriteria(rows, growthLabel, 1, true);
+
+            if (growthRowIdx !== -1) {
+                const actualCell = rows[growthRowIdx]?.cells?.[actualColIdx];
+                const currentActual = resolveCellNumericValue(actualCell);
+
+                // Get previous quarter actual from API data (parse to number if string)
+                const previousActualRaw = previousQuarterActuals?.actuals?.[fieldName];
+                const previousActual = previousActualRaw !== null && previousActualRaw !== undefined
+                    ? Number(previousActualRaw)
                     : null;
 
-            // Check if parent has input
-            const hasParentInput = actualCell?.input || actualCell?.addr;
-            const parentActualValue = resolveCellNumericValue(actualCell);
-            const parentPlanValue = resolveCellNumericValue(planCell);
-            const parentPrevActualValue = prevActualCell
-                ? resolveCellNumericValue(prevActualCell)
-                : null;
+                console.log(`📊 [MINUS ${key}] Current actual from form:`, {
+                    value: currentActual,
+                    type: typeof currentActual,
+                    isFinite: Number.isFinite(currentActual),
+                });
 
-            if (
-                hasParentInput &&
-                parentActualValue !== null &&
-                parentActualValue !== 0
-            ) {
-                // Case 1: Parent has input - use parent values
-                planValue = parentPlanValue;
-                actualValue = parentActualValue;
-                prevActualValue = parentPrevActualValue;
-            } else {
-                // Case 2&3: Sum from child rows
-                let totalPlan = 0;
-                let totalActual = 0;
-                let totalPrevActual = 0;
-                let hasChildData = false;
+                console.log(`📊 [MINUS ${key}] Previous actual from API (${fieldName}):`, {
+                    rawValue: previousActualRaw,
+                    rawType: typeof previousActualRaw,
+                    parsedValue: previousActual,
+                    parsedType: typeof previousActual,
+                    isFinite: Number.isFinite(previousActual),
+                });
 
-                // Find child rows (rows with empty STT column)
-                for (let i = growthRowIdx + 1; i < rows.length; i++) {
-                    const childRow = rows[i];
-                    const childSTT = String(
-                        childRow?.cells?.[0]?.value || ""
-                    ).trim();
+                if (
+                    currentActual !== null &&
+                    currentActual !== undefined &&
+                    Number.isFinite(currentActual) &&
+                    previousActual !== null &&
+                    previousActual !== undefined &&
+                    Number.isFinite(previousActual)
+                ) {
+                    // Handle fixed-point rules (Nợ nhóm 2, Nợ xấu)
+                    if (fixedPoints && !step) {
+                        // Check if ratio increased
+                        const planCell = rows[growthRowIdx]?.cells?.[planColIdx];
+                        const planValue = resolveCellNumericValue(planCell);
 
-                    // Stop when encountering next parent row (row with STT value)
-                    if (childSTT) break;
+                        if (planValue !== null && Number.isFinite(planValue) && planValue !== 0) {
+                            const increased = currentActual > planValue;
 
-                    const childPlanCell = childRow?.cells?.[planColIdx];
-                    const childActualCell = childRow?.cells?.[actualColIdx];
-                    const childPrevActualCell =
-                        prevActualColIdx != null
-                            ? childRow?.cells?.[prevActualColIdx]
-                            : null;
+                            console.log(`🧮 [MINUS ${key}] Fixed points comparison:`, {
+                                current: currentActual,
+                                plan: planValue,
+                                increased: increased,
+                            });
 
-                    if (childPlanCell || childActualCell) {
-                        const childPlan =
-                            resolveCellNumericValue(childPlanCell) || 0;
-                        const childActual =
-                            resolveCellNumericValue(childActualCell) || 0;
-                        const childPrevActual = childPrevActualCell
-                            ? resolveCellNumericValue(childPrevActualCell) || 0
-                            : 0;
-
-                        totalPlan += childPlan;
-                        totalActual += childActual;
-                        totalPrevActual += childPrevActual;
-
-                        if (childActual > 0) hasChildData = true;
+                            if (increased) {
+                                minusPoints = Math.abs(fixedPoints);
+                                const increaseRatio = (currentActual - planValue) / Math.abs(planValue);
+                                noteText = `Tăng ${formatPercentVi(increaseRatio)}`;
+                                console.log(`✅ [MINUS ${key}] Applied ${minusPoints} points for increase`);
+                            } else {
+                                console.log(`❌ [MINUS ${key}] No points - no increase detected`);
+                            }
+                        }
                     }
-                }
+                    // Handle step-based rules (Nguồn vốn, Dư nợ)
+                    else if (step && maxPoints) {
+                        // Compare current vs previous (decrease = negative growth)
+                        if (previousActual !== 0) {
+                            const negativeRatio = previousActual > currentActual
+                                ? (previousActual - currentActual) / Math.abs(previousActual)
+                                : 0;
 
-                if (hasChildData || totalPlan > 0) {
-                    planValue = totalPlan > 0 ? totalPlan : parentPlanValue;
-                    actualValue = totalActual;
-                    prevActualValue =
-                        totalPrevActual > 0
-                            ? totalPrevActual
-                            : parentPrevActualValue;
+                            console.log(`🧮 [MINUS ${key}] Step-based comparison:`, {
+                                previous: previousActual,
+                                current: currentActual,
+                                negativeRatio: negativeRatio,
+                                isDecrease: negativeRatio > 0,
+                            });
+
+                            if (negativeRatio > 0) {
+                                const absStep = Math.abs(step);
+                                const rawPoints = Math.floor((negativeRatio + 1e-9) / absStep);
+                                const absMaxPoints = Math.abs(maxPoints);
+                                minusPoints = Math.min(absMaxPoints, rawPoints);
+                                noteText = `Giảm ${formatPercentVi(negativeRatio)} so với Q${previousQuarterActuals.previous_quarter}`;
+                                console.log(`✅ [MINUS ${key}] Applied ${minusPoints} points for decrease`);
+                            } else {
+                                console.log(`❌ [MINUS ${key}] No points - no decrease detected`);
+                            }
+                        }
+                    }
                 } else {
-                    // Fallback to parent values
+                    console.log(`⚠️ [MINUS ${key}] Invalid data - cannot compare:`, {
+                        currentValid: currentActual !== null && currentActual !== undefined && Number.isFinite(currentActual),
+                        previousValid: previousActual !== null && previousActual !== undefined && Number.isFinite(previousActual),
+                    });
+                }
+            } else {
+                console.log(`⚠️ [MINUS ${key}] Row not found for "${growthLabel}"`);
+            }
+        } else {
+            // Original logic for rules not using QuarterActual
+            // Find growth row by criteria
+            const growthRowIdx = findRowIndexByCriteria(rows, growthLabel, 1, true);
+
+            let planValue = null;
+            let actualValue = null;
+            let prevActualValue = null;
+
+            if (growthRowIdx !== -1) {
+                const planCell = rows[growthRowIdx]?.cells?.[planColIdx];
+                const actualCell = rows[growthRowIdx]?.cells?.[actualColIdx];
+                const prevActualCell =
+                    prevActualColIdx != null
+                        ? rows[growthRowIdx]?.cells?.[prevActualColIdx]
+                        : null;
+
+                // Check if parent has input
+                const hasParentInput = actualCell?.input || actualCell?.addr;
+                const parentActualValue = resolveCellNumericValue(actualCell);
+                const parentPlanValue = resolveCellNumericValue(planCell);
+                const parentPrevActualValue = prevActualCell
+                    ? resolveCellNumericValue(prevActualCell)
+                    : null;
+
+                if (
+                    hasParentInput &&
+                    parentActualValue !== null &&
+                    parentActualValue !== 0
+                ) {
+                    // Case 1: Parent has input - use parent values
                     planValue = parentPlanValue;
                     actualValue = parentActualValue;
                     prevActualValue = parentPrevActualValue;
+                } else {
+                    // Case 2&3: Sum from child rows
+                    let totalPlan = 0;
+                    let totalActual = 0;
+                    let totalPrevActual = 0;
+                    let hasChildData = false;
+
+                    // Find child rows (rows with empty STT column)
+                    for (let i = growthRowIdx + 1; i < rows.length; i++) {
+                        const childRow = rows[i];
+                        const childSTT = String(
+                            childRow?.cells?.[0]?.value || ""
+                        ).trim();
+
+                        // Stop when encountering next parent row (row with STT value)
+                        if (childSTT) break;
+
+                        const childPlanCell = childRow?.cells?.[planColIdx];
+                        const childActualCell = childRow?.cells?.[actualColIdx];
+                        const childPrevActualCell =
+                            prevActualColIdx != null
+                                ? childRow?.cells?.[prevActualColIdx]
+                                : null;
+
+                        if (childPlanCell || childActualCell) {
+                            const childPlan =
+                                resolveCellNumericValue(childPlanCell) || 0;
+                            const childActual =
+                                resolveCellNumericValue(childActualCell) || 0;
+                            const childPrevActual = childPrevActualCell
+                                ? resolveCellNumericValue(childPrevActualCell) || 0
+                                : 0;
+
+                            totalPlan += childPlan;
+                            totalActual += childActual;
+                            totalPrevActual += childPrevActual;
+
+                            if (childActual > 0) hasChildData = true;
+                        }
+                    }
+
+                    if (hasChildData || totalPlan > 0) {
+                        planValue = totalPlan > 0 ? totalPlan : parentPlanValue;
+                        actualValue = totalActual;
+                        prevActualValue =
+                            totalPrevActual > 0
+                                ? totalPrevActual
+                                : parentPrevActualValue;
+                    } else {
+                        // Fallback to parent values
+                        planValue = parentPlanValue;
+                        actualValue = parentActualValue;
+                        prevActualValue = parentPrevActualValue;
+                    }
+                }
+            }
+
+            // Calculate minus points based on rule type (original logic)
+            // Handle fixed-point rules (Nợ nhóm 2, Nợ xấu) - but not used anymore for these
+            if (fixedPoints && !step) {
+                // Compare current vs plan
+                const valid =
+                    actualValue !== null &&
+                    planValue !== null &&
+                    Number.isFinite(actualValue) &&
+                    Number.isFinite(planValue) &&
+                    planValue !== 0;
+
+                if (valid) {
+                    const increased = actualValue > planValue;
+                    if (increased) {
+                        minusPoints = Math.abs(fixedPoints);
+                        const increaseRatio =
+                            (actualValue - planValue) /
+                            Math.abs(planValue);
+                        noteText = `Tăng ${formatPercentVi(increaseRatio)}`;
+                    }
+                }
+            }
+            // Handle step-based rules (Nguồn vốn giảm, Dư nợ giảm) - but not used anymore for these
+            else if (step && maxPoints) {
+                // Compare current quarter actual vs previous quarter actual
+                const valid =
+                    prevActualValue !== null &&
+                    actualValue !== null &&
+                    Number.isFinite(prevActualValue) &&
+                    prevActualValue !== 0 &&
+                    Number.isFinite(actualValue);
+
+                if (valid) {
+                    const negativeRatio =
+                        prevActualValue > actualValue
+                            ? (prevActualValue - actualValue) /
+                            Math.abs(prevActualValue)
+                            : 0;
+
+                    if (negativeRatio > 0) {
+                        const absStep = Math.abs(step);
+                        const rawPoints = Math.floor((negativeRatio + 1e-9) / absStep);
+                        const absMaxPoints = Math.abs(maxPoints);
+                        minusPoints = Math.min(absMaxPoints, rawPoints);
+                        noteText = `Giảm ${formatPercentVi(
+                            negativeRatio
+                        )} so với Quý trước`;
+                    }
                 }
             }
         }
@@ -260,60 +423,6 @@ export function processMinusRules({
 
             return updates;
         };
-
-        // Calculate minus points based on rule type
-        let minusPoints = 0;
-        let noteText = "";
-
-        // Handle fixed-point rules (Nợ nhóm 2, Nợ xấu)
-        if (fixedPoints && !step) {
-            // Compare current vs previous quarter
-            const valid =
-                actualValue !== null &&
-                planValue !== null &&
-                Number.isFinite(actualValue) &&
-                Number.isFinite(planValue) &&
-                planValue !== 0;
-
-            if (valid) {
-                const increased = actualValue > planValue;
-                if (increased) {
-                    minusPoints = Math.abs(fixedPoints); // Use absolute value
-                    const increaseRatio =
-                        (actualValue - planValue) /
-                        Math.abs(planValue);
-                    noteText = `Tăng ${formatPercentVi(increaseRatio)}`;
-                }
-            }
-        }
-        // Handle step-based rules (Nguồn vốn giảm, Dư nợ giảm)
-        else if (step && maxPoints) {
-            // Compare current quarter actual vs previous quarter actual
-            const valid =
-                prevActualValue !== null &&
-                actualValue !== null &&
-                Number.isFinite(prevActualValue) &&
-                prevActualValue !== 0 &&
-                Number.isFinite(actualValue);
-
-            if (valid) {
-                const negativeRatio =
-                    prevActualValue > actualValue
-                        ? (prevActualValue - actualValue) /
-                        Math.abs(prevActualValue)
-                        : 0;
-
-                if (negativeRatio > 0) {
-                    const absStep = Math.abs(step);
-                    const rawPoints = Math.floor((negativeRatio + 1e-9) / absStep);
-                    const absMaxPoints = Math.abs(maxPoints);
-                    minusPoints = Math.min(absMaxPoints, rawPoints);
-                    noteText = `Giảm ${formatPercentVi(
-                        negativeRatio
-                    )} so với Quý trước`;
-                }
-            }
-        }
 
         // If no minus points, remove the auto-generated row
         if (minusPoints <= 0) {

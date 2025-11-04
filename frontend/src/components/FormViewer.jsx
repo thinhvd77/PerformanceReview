@@ -152,6 +152,9 @@ export default function FormViewer({ formId }) {
     // State to track table initialization (triggers quarterly metrics load)
     const [tableReady, setTableReady] = useState(false);
 
+    // State for previous quarter actuals data (for Nợ xấu, Nợ nhóm 2)
+    const [previousQuarterActuals, setPreviousQuarterActuals] = useState(null);
+
     // Build cell map & tính công thức dựa trên bảng "sống"
     const cellMap = useMemo(() => buildCellMap(table), [table]);
 
@@ -240,6 +243,44 @@ export default function FormViewer({ formId }) {
         manualEditedAddrsRef.current.add(addr);
         setCellInputs((prev) => ({ ...prev, [addr]: v }));
     }, []);
+
+    /**
+     * Load previous quarter actuals data for AUTO_GROWTH_RULES processing
+     * (Nợ xấu và Nợ nhóm 2)
+     */
+    useEffect(() => {
+        if (!selectedQuarter || !selectedYear) {
+            setPreviousQuarterActuals(null);
+            return;
+        }
+
+        let cancelled = false;
+        const loadPreviousQuarterActuals = async () => {
+            try {
+                const { data } = await api.get("/quarter-actuals/previous", {
+                    params: {
+                        quarter: selectedQuarter,
+                        year: selectedYear,
+                    },
+                });
+
+                if (!cancelled) {
+                    setPreviousQuarterActuals(data);
+                }
+            } catch (err) {
+                console.warn("Failed to load previous quarter actuals:", err);
+                if (!cancelled) {
+                    setPreviousQuarterActuals(null);
+                }
+            }
+        };
+
+        loadPreviousQuarterActuals();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [selectedQuarter, selectedYear]);
 
     /**
      * Load saved quarter plan ("Kế hoạch quý") values for the active quarter/year.
@@ -470,6 +511,9 @@ export default function FormViewer({ formId }) {
             computedByAddr,
             virtualRowNo,
             resolveCellNumericValue,
+            previousQuarterActuals,
+            selectedQuarter,
+            selectedYear,
         });
 
         if (!result) return;
@@ -491,6 +535,9 @@ export default function FormViewer({ formId }) {
         computedByAddr,
         virtualRowNo,
         resolveCellNumericValue,
+        previousQuarterActuals,
+        selectedQuarter,
+        selectedYear,
     ]);
 
     // AUTO_MINUS_RULES useEffect - Section IV (Điểm trừ)
@@ -510,6 +557,9 @@ export default function FormViewer({ formId }) {
             computedByAddr,
             virtualRowNo,
             resolveCellNumericValue,
+            previousQuarterActuals,
+            selectedQuarter,
+            selectedYear,
         });
 
         if (!result) return;
@@ -533,6 +583,9 @@ export default function FormViewer({ formId }) {
         computedByAddr,
         virtualRowNo,
         resolveCellNumericValue,
+        previousQuarterActuals,
+        selectedQuarter,
+        selectedYear,
     ]);
 
     // AUTO_BONUS_RULES useEffect - Section V (Điểm thưởng)

@@ -72,36 +72,6 @@ export function findNoteColumnIndex(columns) {
 }
 
 /**
- * Find "Thực hiện quý trước" column (Previous quarter actual)
- * @param {Array} columns - Array of column objects
- * @returns {number|null} Column index or null if not found
- */
-export function findPrevActualColumnIndex(columns) {
-    const idx = findColumnIndex(columns, "thực hiện quý trước", false);
-    return idx >= 0 ? idx : null;
-}
-
-/**
- * Find "Kế hoạch quý trước" column (Previous quarter plan)
- * @param {Array} columns - Array of column objects
- * @returns {number|null} Column index or null if not found
- */
-export function findPrevPlanColumnIndex(columns) {
-    const idx = findColumnIndex(columns, "ke hoach quy truoc", true);
-    return idx >= 0 ? idx : null;
-}
-
-/**
- * Find "Kế hoạch năm" column (Annual plan)
- * @param {Array} columns - Array of column objects
- * @returns {number|null} Column index or null if not found
- */
-export function findAnnualPlanColumnIndex(columns) {
-    const idx = findColumnIndex(columns, "ke hoach nam", true);
-    return idx >= 0 ? idx : null;
-}
-
-/**
  * Find all standard column indices at once
  * @param {Array} columns - Array of column objects
  * @returns {Object} Object with all column indices
@@ -112,8 +82,5 @@ export function findAllColumnIndices(columns) {
         planColIdx: findPlanColumnIndex(columns),
         actualColIdx: findActualColumnIndex(columns),
         noteColIdx: findNoteColumnIndex(columns),
-        prevActualColIdx: findPrevActualColumnIndex(columns),
-        prevPlanColIdx: findPrevPlanColumnIndex(columns),
-        annualPlanColIdx: findAnnualPlanColumnIndex(columns),
     };
 }

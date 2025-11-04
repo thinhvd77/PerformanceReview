@@ -158,7 +158,7 @@ export default function QuarterPlanModal({ open, user, onClose }) {
                     </Button>
                 </Space>
             }
-            destroyOnClose
+            destroyOnHidden={true}
         >
             <Space style={{ marginBottom: 16 }}>
                 <div>

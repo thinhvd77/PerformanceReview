@@ -13,16 +13,106 @@ import { message } from "antd";
 import { saveAs } from "file-saver";
 import exportFormExcel from "../../../utils/exportFormExcel.js";
 import { orgData, findNameById } from "../../../data/orgData.js";
-import {
-    cloneTable,
-} from "../utils/tableUtils.js";
+import { cloneTable } from "../utils/tableUtils.js";
 import {
     applyBaseScoreDefaults,
+    resolveCellNumericValue as resolveCellNumericValueUtil,
 } from "../utils/formCalculations.js";
 import { buildInitialInputs } from "../../../utils/formulaEngine.js";
 import { saveQuarterlyMetrics } from "./quarterlyMetricsHandler.js";
 import { computeDefaultCriteria } from "../utils/formLoader.js";
 import { AUTO_BONUS_RULE_KEY_SET } from "../constants/autoRules.js";
+import { normalizeText } from "../utils/formUtils.js";
+
+const QUARTER_ACTUAL_CRITERIA = [
+    {
+        field: "capital_growth_actual",
+        patterns: ["tang truong nguon von"],
+    },
+    {
+        field: "loan_growth_actual",
+        patterns: ["tang truong du no"],
+    },
+    {
+        field: "bad_loan_ratio_actual",
+        patterns: ["no xau", "ty le no xau"],
+    },
+    {
+        field: "group_2_loan_ratio_actual",
+        patterns: ["no nhom 2", "ty le no nhom 2"],
+    },
+];
+
+const findCurrentQuarterActualColumnIndex = (columns = []) => {
+    return columns.findIndex((col) => {
+        const normalized = normalizeText(col?.label);
+        if (!normalized) return false;
+        if (normalized.includes("thuc hien quy nay")) return true;
+        if (
+            normalized.includes("thuc hien") &&
+            !normalized.includes("quy truoc")
+        ) {
+            return true;
+        }
+        return false;
+    });
+};
+
+const extractQuarterActualValues = ({
+    table,
+    cellInputs,
+    computedByAddr,
+}) => {
+    if (!table?.rows || !Array.isArray(table.columns)) {
+        return null;
+    }
+
+    const actualColIdx = findCurrentQuarterActualColumnIndex(table.columns);
+    if (actualColIdx < 0) {
+        return null;
+    }
+
+    const rowMap = new Map();
+    table.rows.forEach((row) => {
+        const criteriaCell = row?.cells?.[1];
+        if (!criteriaCell) return;
+        const label = normalizeText(criteriaCell.value);
+        if (label) {
+            rowMap.set(label, row);
+        }
+    });
+
+    const result = {};
+
+    QUARTER_ACTUAL_CRITERIA.forEach(({ field, patterns }) => {
+        let row = null;
+        for (const [label, candidateRow] of rowMap.entries()) {
+            if (
+                patterns?.some((pattern) => label.includes(pattern))
+            ) {
+                row = candidateRow;
+                break;
+            }
+        }
+        if (!row) {
+            result[field] = null;
+            return;
+        }
+        const cell = row?.cells?.[actualColIdx];
+        const value = resolveCellNumericValueUtil(
+            cell,
+            cellInputs,
+            computedByAddr
+        );
+        if (value === null || value === undefined || Number.isNaN(value)) {
+            result[field] = null;
+        } else {
+            result[field] = Number(value);
+        }
+    });
+
+    return result;
+};
 
 /**
  * Extracts user metadata for export
@@ -174,6 +264,60 @@ export async function uploadExportToBackend({
     } catch (err) {
         console.warn("Upload export failed:", err?.response?.data || err.message);
         return null;
+    }
+}
+
+/**
+ * Persists quarter actual values for key metrics.
+ *
+ * @param {Object} params - Save parameters
+ * @param {Object} params.table - Form table structure
+ * @param {Object} params.cellInputs - User inputs by cell address
+ * @param {Object} params.computedByAddr - Computed formula results
+ * @param {number} params.selectedQuarter - Selected quarter (1-4)
+ * @param {number} params.selectedYear - Selected year
+ * @param {Object} params.api - API instance
+ * @returns {Promise<void>}
+ */
+export async function saveQuarterActuals({
+    table,
+    cellInputs,
+    computedByAddr,
+    selectedQuarter,
+    selectedYear,
+    api,
+}) {
+    try {
+        const payload = extractQuarterActualValues({
+            table,
+            cellInputs,
+            computedByAddr,
+        });
+
+        if (!payload) {
+            console.warn("Could not determine quarter actual values from form");
+            return;
+        }
+
+        const hasAnyField = Object.values(payload).some(
+            (value) => value !== null && value !== undefined
+        );
+
+        if (!hasAnyField) {
+            console.log("No quarter actual values to save");
+            // Still send to clear any previous persisted data
+        }
+
+        await api.post("/quarter-actuals", {
+            quarter: selectedQuarter,
+            year: selectedYear,
+            actuals: payload,
+        });
+    } catch (err) {
+        console.warn(
+            "Failed to save quarter actuals:",
+            err?.response?.data || err.message
+        );
     }
 }
 
@@ -333,6 +477,15 @@ export async function handleExportWorkflow({
 
         // Step 5: Save quarterly metrics (non-fatal if fails)
         await saveQuarterlyMetrics({
+            table,
+            cellInputs,
+            computedByAddr,
+            selectedQuarter,
+            selectedYear,
+            api,
+        });
+
+        await saveQuarterActuals({
             table,
             cellInputs,
             computedByAddr,

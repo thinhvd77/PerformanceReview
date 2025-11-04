@@ -14,11 +14,13 @@ import api from "../services/api.js";
 const { Title } = Typography;
 
 const METRIC_TYPES = [
-    { key: "capital_growth", label: "Tăng trưởng nguồn vốn" },
-    { key: "loan_growth", label: "Tăng trưởng dư nợ" },
-    { key: "service_revenue", label: "Thu dịch vụ" },
-    { key: "debt_recovery", label: "Thu hồi nợ đã XLRR" },
-    { key: "finance", label: "Thu tài chính" },
+    { key: "capital_growth_actual", label: "Tăng trưởng nguồn vốn" },
+    { key: "loan_growth_actual", label: "Tăng trưởng dư nợ" },
+    { key: "bad_loan_ratio_actual", label: "Tỷ lệ nợ xấu" },
+    { key: "group_2_loan_ratio_actual", label: "Tỷ lệ nợ nhóm 2" },
+    // { key: "service_revenue", label: "Thu dịch vụ" },
+    // { key: "debt_recovery", label: "Thu hồi nợ đã XLRR" },
+    // { key: "finance", label: "Thu tài chính" },
 ];
 
 export default function QuarterActualModal({ open, user, onClose }) {
@@ -38,11 +40,16 @@ export default function QuarterActualModal({ open, user, onClose }) {
 
         setLoading(true);
         try {
-            const metricsRes = await api.get("/annual-metrics", {
-                params: { username: user.username, year: selectedYear },
+            const metricsRes = await api.get("/quarter-actuals", {
+                params: {
+                    year: selectedYear,
+                    username: user.username,
+                },
             });
 
             const metricsData = metricsRes.data?.data || {};
+
+            console.log(metricsData);
 
             // Transform data into table rows
             const rows = METRIC_TYPES.map((metric) => ({
@@ -70,23 +77,29 @@ export default function QuarterActualModal({ open, user, onClose }) {
 
         setSaving(true);
         try {
-            const metrics = {};
-            dataSource.forEach((row) => {
-                metrics[row.key] = {
-                    q1Actual: row.q1Actual,
-                    q2Actual: row.q2Actual,
-                    q3Actual: row.q3Actual,
-                    q4Actual: row.q4Actual,
+            // Save each quarter's data separately
+            const quarters = [1, 2, 3, 4];
+
+            for (const quarter of quarters) {
+                const quarterKey = `q${quarter}Actual`;
+                const actuals = {};
+
+                dataSource.forEach((row) => {
+                    const value = row[quarterKey];
+                    // Use the key directly as it already has "_actual" suffix
+                    actuals[row.key] = value;
+                });
+
+                const payload = {
+                    quarter,
+                    year: selectedYear,
+                    actuals,
+                    username: user.username,
                 };
-            });
 
-            const payload = {
-                username: user.username,
-                year: selectedYear,
-                metrics,
-            };
+                await api.post("/quarter-actuals", payload);
+            }
 
-            await api.post("/annual-metrics", payload);
             message.success("Thực hiện quý đã lưu thành công");
             onClose();
         } catch (e) {
@@ -221,7 +234,7 @@ export default function QuarterActualModal({ open, user, onClose }) {
                     </Button>
                 </Space>
             }
-            destroyOnClose
+            destroyOnHidden={true}
         >
             <div style={{ marginBottom: 16 }}>
                 <label style={{ marginRight: 8, fontWeight: 500 }}>Năm:</label>

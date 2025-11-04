@@ -34,6 +34,22 @@ export const AUTO_GROWTH_RULES = [
         threshold: 1.1, // 110%
         fixedPoints: 3, // Fixed +3 points when threshold met
     },
+    {
+        growthLabel: "Nợ nhóm 2",
+        bonusLabel: "Số tuyệt đối nợ nhóm 2 giảm so với Quý trước",
+        key: "loan-group-2-recovery",
+        fixedPoints: 1, // Fixed +1 points if decreased
+        useQuarterActual: true, // Use QuarterActual data instead of form column
+        fieldName: "group_2_loan_ratio_actual",
+    },
+    {
+        growthLabel: "Nợ xấu",
+        bonusLabel: "Số tuyệt đối nợ xấu giảm so với Quý trước",
+        key: "bad-loan-recovery",
+        fixedPoints: 2, // Fixed +2 points if decreased
+        useQuarterActual: true, // Use QuarterActual data instead of form column
+        fieldName: "bad_loan_ratio_actual",
+    },
 ];
 
 /**
@@ -45,13 +61,13 @@ export const AUTO_MINUS_RULES = [
         growthLabel: "Nợ nhóm 2",
         bonusLabel: "Tỷ lệ nợ nhóm 2 tăng trong Quý",
         key: "loan-group-2-minus",
-        fixedPoints: -1, // Fixed -2 points if increased
+        fixedPoints: -1,
     },
     {
         growthLabel: "Nợ xấu",
         bonusLabel: "Tỷ lệ nợ xấu tăng trong Quý",
         key: "bad-loan-minus",
-        fixedPoints: -2, // Fixed -2 points if increased
+        fixedPoints: -2,
     },
     {
         growthLabel: "Tăng trưởng nguồn vốn",
@@ -60,6 +76,8 @@ export const AUTO_MINUS_RULES = [
         key: "capital-minus",
         step: -0.05, // -1 point per 5% decrease
         maxPoints: -5, // Maximum -5 points
+        useQuarterActual: true, // Use QuarterActual data instead of form column
+        fieldName: "capital_growth_actual",
     },
     {
         growthLabel: "Tăng trưởng dư nợ",
@@ -68,6 +86,8 @@ export const AUTO_MINUS_RULES = [
         key: "loan-minus",
         step: -0.05, // -1 point per 5% decrease
         maxPoints: -5, // Maximum -5 points
+        useQuarterActual: true, // Use QuarterActual data instead of form column
+        fieldName: "loan_growth_actual",
     },
 ];
 

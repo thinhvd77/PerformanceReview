@@ -10,12 +10,12 @@ export const QuarterPlan = new EntitySchema({
         year: { type: "int", nullable: false },
 
         // Values for the quarter plan
-        capital_growth_plan: { type: "decimal", precision: 15, scale: 2, nullable: true },
-        loan_growth_plan: { type: "decimal", precision: 15, scale: 2, nullable: true },
-        service_revenue_plan: { type: "decimal", precision: 15, scale: 2, nullable: true },
-        debt_recovery_plan: { type: "decimal", precision: 15, scale: 2, nullable: true },
-        bad_loan_ratio_plan: { type: "decimal", precision: 5, scale: 2, nullable: true },
-        group_2_loan_ratio_plan: { type: "decimal", precision: 5, scale: 2, nullable: true },
+        capital_growth_plan: { type: "decimal", precision: 15, scale: 2, nullable: true, default: 0 },
+        loan_growth_plan: { type: "decimal", precision: 15, scale: 2, nullable: true, default: 0 },
+        service_revenue_plan: { type: "decimal", precision: 15, scale: 2, nullable: true, default: 0 },
+        debt_recovery_plan: { type: "decimal", precision: 15, scale: 2, nullable: true, default: 0 },
+        bad_loan_ratio_plan: { type: "decimal", precision: 5, scale: 2, nullable: true, default: 0 },
+        group_2_loan_ratio_plan: { type: "decimal", precision: 5, scale: 2, nullable: true, default: 0 },
         credit_marketing_plan: { type: "decimal", precision: 15, scale: 2, nullable: true },
 
         // Metadata

@@ -1,11 +1,9 @@
-import React from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Login from './components/Login';
 import FormViewer from "./components/FormViewer.jsx";
 import AdminPage from './pages/Admin/AdminPage';
 import DashboardPage from './pages/Dashboard/DashboardPage.jsx';
 import FormPage from './pages/User/FormPage.jsx';
-import SavedExportViewer from './components/SavedExportViewer.jsx';
 import { useAuth } from './contexts/authContext.jsx';
 
 const PrivateRoute = ({ children, adminOnly = false, allowedRoles = [] }) => {
@@ -50,9 +48,6 @@ const AuthRedirect = () => {
     if (isAdmin) {
         return <Navigate to="/admin" replace />;
     }
-    // if (isManager) {
-    //     return <Navigate to="/" replace />;
-    // }
     return <FormPage />;
 };
 
@@ -90,14 +85,6 @@ function App() {
                     element={
                         <PrivateRoute adminOnly={true}>
                             <AdminPage />
-                        </PrivateRoute>
-                    }
-                />
-                <Route
-                    path="/saved-exports/:id"
-                    element={
-                        <PrivateRoute>
-                            <SavedExportViewer />
                         </PrivateRoute>
                     }
                 />

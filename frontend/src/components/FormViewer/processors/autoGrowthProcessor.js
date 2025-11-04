@@ -21,6 +21,9 @@ import { buildParentFormula } from "../utils/formulaUtils.js";
  * @param {Object} params.computedByAddr - Computed values by address
  * @param {number} params.virtualRowNo - Current virtual row number
  * @param {Function} params.resolveCellNumericValue - Function to resolve cell numeric value
+ * @param {Object} params.previousQuarterActuals - Previous quarter actuals data from API (optional)
+ * @param {number} params.selectedQuarter - Selected quarter (1-4)
+ * @param {number} params.selectedYear - Selected year
  * @returns {Object|null} State updates {table, cellInputs, virtualRowNo, childrenScoreAddrs} or null if no changes
  */
 export function processGrowthRules({
@@ -36,6 +39,9 @@ export function processGrowthRules({
     computedByAddr,
     virtualRowNo,
     resolveCellNumericValue,
+    previousQuarterActuals,
+    selectedQuarter,
+    selectedYear,
 }) {
     if (
         !table?.rows ||
@@ -120,128 +126,208 @@ export function processGrowthRules({
 
     // Process a single rule
     const processRule = (rule) => {
-        const { growthLabel, bonusLabel, key } = rule;
+        const { growthLabel, bonusLabel, key, useQuarterActual, fieldName } = rule;
         const autoInfo = autoRowsByKey.get(key) || null;
         const autoRowIdx = autoInfo?.idx ?? -1;
         const autoAddr = autoInfo?.row?.cells?.[scoreColIdx]?.addr || null;
         const otherAutoAddrs = otherAutoAddrsFor(key);
 
-        // Find the growth row this rule references
-        const growthRowIdx = findRowIndexByCriteria(
-            rows,
-            growthLabel,
-            1,
-            true
-        );
-
         let planValue = null;
         let actualValue = null;
+        let valid = false;
+        let bonusPoints = 0;
+        let noteText = "";
 
-        if (growthRowIdx !== -1) {
-            const planCell = rows[growthRowIdx]?.cells?.[planColIdx];
-            const actualCell = rows[growthRowIdx]?.cells?.[actualColIdx];
+        // Special handling for QuarterActual-based rules (Nợ xấu, Nợ nhóm 2)
+        if (useQuarterActual && fieldName) {
+            console.log(`🔍 [${key}] Processing QuarterActual-based rule for "${growthLabel}"`);
 
-            // Check if parent row has input
-            const hasParentInput = actualCell?.input || actualCell?.addr;
-            const parentActualValue = resolveCellNumericValue(actualCell);
-            const parentPlanValue = resolveCellNumericValue(planCell);
+            // Get current quarter actual from form
+            const growthRowIdx = findRowIndexByCriteria(rows, growthLabel, 1, true);
 
-            if (
-                hasParentInput &&
-                parentActualValue !== null &&
-                parentActualValue !== 0
-            ) {
-                // Type 1: Direct parent input
-                planValue = parentPlanValue;
-                actualValue = parentActualValue;
-            } else {
-                // Type 2&3: Aggregate from child rows
-                let totalPlan = 0;
-                let totalActual = 0;
-                let hasChildData = false;
+            if (growthRowIdx !== -1) {
+                const actualCell = rows[growthRowIdx]?.cells?.[actualColIdx];
+                const currentActual = resolveCellNumericValue(actualCell);
 
-                // Find child rows (rows with empty STT column)
-                for (let i = growthRowIdx + 1; i < rows.length; i++) {
-                    const childRow = rows[i];
-                    const childSTT = String(
-                        childRow?.cells?.[0]?.value || ""
-                    ).trim();
+                // Get previous quarter actual from API data (parse to number if string)
+                const previousActualRaw = previousQuarterActuals?.actuals?.[fieldName];
+                const previousActual = previousActualRaw !== null && previousActualRaw !== undefined
+                    ? Number(previousActualRaw)
+                    : null;
 
-                    // Stop when encountering another parent row (row with STT value)
-                    if (childSTT) break;
+                console.log(`📊 [${key}] Current actual from form:`, {
+                    value: currentActual,
+                    type: typeof currentActual,
+                    isFinite: Number.isFinite(currentActual),
+                    cellValue: actualCell?.value,
+                    cellInput: actualCell?.input,
+                });
 
-                    const childPlanCell = childRow?.cells?.[planColIdx];
-                    const childActualCell = childRow?.cells?.[actualColIdx];
+                console.log(`📊 [${key}] Previous actual from API (${fieldName}):`, {
+                    rawValue: previousActualRaw,
+                    rawType: typeof previousActualRaw,
+                    parsedValue: previousActual,
+                    parsedType: typeof previousActual,
+                    isFinite: Number.isFinite(previousActual),
+                    rawData: previousQuarterActuals?.actuals,
+                    quarter: previousQuarterActuals?.previous_quarter,
+                    year: previousQuarterActuals?.previous_year,
+                });
 
-                    if (childPlanCell || childActualCell) {
-                        const childPlan =
-                            resolveCellNumericValue(childPlanCell) || 0;
-                        const childActual =
-                            resolveCellNumericValue(childActualCell) || 0;
+                if (
+                    currentActual !== null &&
+                    currentActual !== undefined &&
+                    Number.isFinite(currentActual) &&
+                    previousActual !== null &&
+                    previousActual !== undefined &&
+                    Number.isFinite(previousActual)
+                ) {
+                    valid = true;
 
-                        totalPlan += childPlan;
-                        totalActual += childActual;
+                    // Calculate decrease (previous - current)
+                    const decrease = previousActual - currentActual;
 
-                        if (childActual > 0) hasChildData = true;
+                    console.log(`🧮 [${key}] Comparison:`, {
+                        previous: previousActual,
+                        current: currentActual,
+                        decrease: decrease,
+                        isDecrease: decrease > 0,
+                    });
+
+                    // Award points if decreased (decrease > 0)
+                    if (decrease > 0) {
+                        bonusPoints = rule.fixedPoints || 0;
+                        noteText = `Giảm từ ${previousActual*100}% (Q${previousQuarterActuals.previous_quarter}) xuống ${currentActual*100}%`;
+                        console.log(`✅ [${key}] Awarded ${bonusPoints} points for decrease`);
+                    } else {
+                        bonusPoints = 0;
+                        noteText = "";
+                        console.log(`❌ [${key}] No points - no decrease detected`);
                     }
-                }
-
-                if (hasChildData || totalPlan > 0) {
-                    planValue = totalPlan > 0 ? totalPlan : parentPlanValue;
-                    actualValue = totalActual;
                 } else {
-                    // Fallback to parent values
+                    console.log(`⚠️ [${key}] Invalid data - cannot compare:`, {
+                        currentValid: currentActual !== null && currentActual !== undefined && Number.isFinite(currentActual),
+                        previousValid: previousActual !== null && previousActual !== undefined && Number.isFinite(previousActual),
+                    });
+                }
+            } else {
+                console.log(`⚠️ [${key}] Row not found for "${growthLabel}"`);
+            }
+        } else {
+            // Original logic for other rules
+            // Find the growth row this rule references
+            const growthRowIdx = findRowIndexByCriteria(
+                rows,
+                growthLabel,
+                1,
+                true
+            );
+
+            if (growthRowIdx !== -1) {
+                const planCell = rows[growthRowIdx]?.cells?.[planColIdx];
+                const actualCell = rows[growthRowIdx]?.cells?.[actualColIdx];
+
+                // Check if parent row has input
+                const hasParentInput = actualCell?.input || actualCell?.addr;
+                const parentActualValue = resolveCellNumericValue(actualCell);
+                const parentPlanValue = resolveCellNumericValue(planCell);
+
+                if (
+                    hasParentInput &&
+                    parentActualValue !== null &&
+                    parentActualValue !== 0
+                ) {
+                    // Type 1: Direct parent input
                     planValue = parentPlanValue;
                     actualValue = parentActualValue;
+                } else {
+                    // Type 2&3: Aggregate from child rows
+                    let totalPlan = 0;
+                    let totalActual = 0;
+                    let hasChildData = false;
+
+                    // Find child rows (rows with empty STT column)
+                    for (let i = growthRowIdx + 1; i < rows.length; i++) {
+                        const childRow = rows[i];
+                        const childSTT = String(
+                            childRow?.cells?.[0]?.value || ""
+                        ).trim();
+
+                        // Stop when encountering another parent row (row with STT value)
+                        if (childSTT) break;
+
+                        const childPlanCell = childRow?.cells?.[planColIdx];
+                        const childActualCell = childRow?.cells?.[actualColIdx];
+
+                        if (childPlanCell || childActualCell) {
+                            const childPlan =
+                                resolveCellNumericValue(childPlanCell) || 0;
+                            const childActual =
+                                resolveCellNumericValue(childActualCell) || 0;
+
+                            totalPlan += childPlan;
+                            totalActual += childActual;
+
+                            if (childActual > 0) hasChildData = true;
+                        }
+                    }
+
+                    if (hasChildData || totalPlan > 0) {
+                        planValue = totalPlan > 0 ? totalPlan : parentPlanValue;
+                        actualValue = totalActual;
+                    } else {
+                        // Fallback to parent values
+                        planValue = parentPlanValue;
+                        actualValue = parentActualValue;
+                    }
                 }
             }
-        }
 
-        // Validate we have usable data
-        const valid =
-            planValue !== null &&
-            actualValue !== null &&
-            Number.isFinite(planValue) &&
-            planValue !== 0 &&
-            Number.isFinite(actualValue);
+            // Validate we have usable data
+            valid =
+                planValue !== null &&
+                actualValue !== null &&
+                Number.isFinite(planValue) &&
+                planValue !== 0 &&
+                Number.isFinite(actualValue);
 
-        // Calculate positive growth ratio
-        const positiveRatio = valid
-            ? Math.max(0, (actualValue - planValue) / Math.abs(planValue))
-            : 0;
+            // Calculate positive growth ratio
+            const positiveRatio = valid
+                ? Math.max(0, (actualValue - planValue) / Math.abs(planValue))
+                : 0;
 
-        // Calculate bonus points based on rule configuration
-        let bonusPoints = 0;
-        if (rule.threshold && rule.fixedPoints) {
-            // Fixed points if threshold met (e.g., Thu hồi nợ đã XLRR)
-            const actualRatio = valid ? actualValue / planValue : 0;
-            bonusPoints = actualRatio >= rule.threshold ? rule.fixedPoints : 0;
-        } else {
-            // Step-based calculation for percentage growth
-            const step =
-                typeof rule.step === "number" && rule.step > 0
-                    ? rule.step
-                    : 0.05;
-            const rawPoints =
-                positiveRatio > 0
-                    ? Math.floor((positiveRatio + 1e-9) / step)
-                    : 0;
-            bonusPoints = Math.min(5, rawPoints);
-        }
-
-        // Build note text
-        const noteText = (() => {
+            // Calculate bonus points based on rule configuration
             if (rule.threshold && rule.fixedPoints) {
+                // Fixed points if threshold met (e.g., Thu hồi nợ đã XLRR)
                 const actualRatio = valid ? actualValue / planValue : 0;
-                return actualRatio >= rule.threshold
-                    ? `Đạt ${formatPercentVi(actualRatio)} (≥110%)`
-                    : "";
+                bonusPoints = actualRatio >= rule.threshold ? rule.fixedPoints : 0;
             } else {
-                return positiveRatio > 0
-                    ? `Vượt ${formatPercentVi(positiveRatio)}`
-                    : "";
+                // Step-based calculation for percentage growth
+                const step =
+                    typeof rule.step === "number" && rule.step > 0
+                        ? rule.step
+                        : 0.05;
+                const rawPoints =
+                    positiveRatio > 0
+                        ? Math.floor((positiveRatio + 1e-9) / step)
+                        : 0;
+                bonusPoints = Math.min(5, rawPoints);
             }
-        })();
+
+            // Build note text
+            noteText = (() => {
+                if (rule.threshold && rule.fixedPoints) {
+                    const actualRatio = valid ? actualValue / planValue : 0;
+                    return actualRatio >= rule.threshold
+                        ? `Đạt ${formatPercentVi(actualRatio)} (≥110%)`
+                        : "";
+                } else {
+                    return positiveRatio > 0
+                        ? `Vượt ${formatPercentVi(positiveRatio)}`
+                        : "";
+                }
+            })();
+        }
 
         // Helper: Remove auto-generated row
         const removeAutoRow = () => {

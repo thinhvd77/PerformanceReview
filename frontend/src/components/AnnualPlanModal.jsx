@@ -150,7 +150,7 @@ export default function AnnualPlanModal({ open, user, onClose }) {
                     </Button>
                 </Space>
             }
-            destroyOnClose
+            destroyOnHidden={true}
         >
             <div style={{ marginBottom: 16 }}>
                 <label style={{ marginRight: 8, fontWeight: 500 }}>Năm:</label>

@@ -11,9 +11,6 @@ import {
     findPlanColumnIndex,
     findActualColumnIndex,
     findNoteColumnIndex,
-    findPrevActualColumnIndex,
-    findPrevPlanColumnIndex,
-    findAnnualPlanColumnIndex,
 } from "../utils/columnUtils.js";
 
 /**
@@ -25,9 +22,6 @@ import {
  *   - planColIdx: Plan column index
  *   - actualColIdx: Actual column index
  *   - noteColIdx: Note column index
- *   - prevActualColIdx: Previous quarter actual column index
- *   - prevPlanColIdx: Previous quarter plan column index
- *   - annualPlanColIdx: Annual plan column index
  */
 export function useColumnIndices(template) {
     const columns = template?.schema?.table?.columns || [];
@@ -52,28 +46,10 @@ export function useColumnIndices(template) {
         [columns]
     );
 
-    const prevActualColIdx = useMemo(
-        () => findPrevActualColumnIndex(columns),
-        [columns]
-    );
-
-    const prevPlanColIdx = useMemo(
-        () => findPrevPlanColumnIndex(columns),
-        [columns]
-    );
-
-    const annualPlanColIdx = useMemo(
-        () => findAnnualPlanColumnIndex(columns),
-        [columns]
-    );
-
     return {
         scoreColIdx,
         planColIdx,
         actualColIdx,
         noteColIdx,
-        prevActualColIdx,
-        prevPlanColIdx,
-        annualPlanColIdx,
     };
 }

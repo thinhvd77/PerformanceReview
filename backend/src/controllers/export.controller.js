@@ -465,8 +465,11 @@ export const listExports = async (req, res) => {
             .where('1=1');
 
         if (q) {
-            // match by fileName or meta->employee_name (if driver supports jsonb path, use LIKE on stringified JSON as fallback)
-            qb.andWhere('LOWER(e.fileName) LIKE :q', { q: `%${q}%` });
+            // Search by employee fullname or username (employee_code)
+            qb.andWhere(
+                '(LOWER(employee.fullname) LIKE :q OR LOWER(employee.username) LIKE :q)',
+                { q: `%${q}%` }
+            );
         }
 
         if (branchId) {

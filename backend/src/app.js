@@ -1,23 +1,17 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import fs from 'fs';
-import path from 'path';
 import bcrypt from "bcryptjs";
-import { fileURLToPath } from 'url';
-import swaggerUi from 'swagger-ui-express';
-import { swaggerSpec } from './config/swaggerDef.js'
 import { AppDataSource } from './config/database.js';
 import userRoutes from './routes/user.routes.js';
 import uploadRoutes from "./routes/upload.routes.js";
 import formTemplateRoutes from './routes/formTemplate.routes.js';
 import exportRoutes from './routes/export.routes.js';
 import recordRoutes from "./routes/record.routes.js";
-import quarterlyMetricRoutes from "./routes/quarterlyMetric.routes.js";
-import annualMetricRoutes from "./routes/annualMetric.routes.js";
 import bonusAwardRoutes from "./routes/bonusAward.routes.js";
 import annualPlanRoutes from "./routes/annualPlan.routes.js";
 import quarterPlanRoutes from "./routes/quarterPlan.routes.js";
+import quarterActualRoutes from "./routes/quarterActual.routes.js";
 
 dotenv.config();
 
@@ -29,38 +23,16 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Swagger setup
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const swaggerPath = path.join(__dirname, 'config', 'swagger.json');
-let swaggerDocument = {};
-try {
-    const spec = fs.readFileSync(swaggerPath, 'utf-8');
-    swaggerDocument = JSON.parse(spec);
-} catch (e) {
-    console.warn('Swagger spec not found or invalid. Swagger UI will be unavailable.', e.message);
-}
-
-// if (Object.keys(swaggerDocument).length > 0) {
-//     // Keep server URL in sync with current PORT
-//     if (swaggerDocument.servers && swaggerDocument.servers.length > 0) {
-//         swaggerDocument.servers[0].url = `http://localhost:${PORT}`;
-//     }
-//     app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
-//     app.get('/swagger.json', (req, res) => res.json(swaggerDocument));
-// }
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 // Routes
 app.use('/api/users', userRoutes);
 app.use('/api/files', uploadRoutes);
 app.use('/api/forms', formTemplateRoutes);
 app.use('/api/exports', exportRoutes);
 app.use('/api/records', recordRoutes);
-app.use('/api/quarterly-metrics', quarterlyMetricRoutes);
-app.use('/api/annual-metrics', annualMetricRoutes);
 app.use('/api/bonus-awards', bonusAwardRoutes);
 app.use('/api/annual-plans', annualPlanRoutes);
 app.use('/api/quarter-plans', quarterPlanRoutes);
+app.use('/api/quarter-actuals', quarterActualRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
@@ -104,3 +76,4 @@ AppDataSource.initialize()
     .catch((error) => {
         console.error('Database connection failed:', error);
     });
+    
