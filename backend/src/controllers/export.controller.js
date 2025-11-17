@@ -603,7 +603,38 @@ export const createExport = async (req, res) => {
         });
 
         if (existingRecord) {
-            // Delete the old file if it exists
+            // CASCADE DELETE: Remove related data before replacing export
+            // 1. Delete related BonusAward records from the old export
+            if (existingRecord.employee_code && existingRecord.year && existingRecord.quarter) {
+                const bonusRepo = AppDataSource.getRepository(BonusAward.options.name);
+                try {
+                    await bonusRepo.delete({
+                        username: existingRecord.employee_code,
+                        year: existingRecord.year,
+                        quarterAwarded: existingRecord.quarter,
+                    });
+                    console.log(`Deleted old BonusAwards for ${existingRecord.employee_code} Q${existingRecord.quarter} ${existingRecord.year}`);
+                } catch (bonusErr) {
+                    console.warn('Failed to delete old bonus awards:', bonusErr?.message || bonusErr);
+                }
+            }
+
+            // 2. Delete related QuarterActual records from the old export
+            if (existingRecord.employee_code && existingRecord.year && existingRecord.quarter) {
+                const quarterActualRepo = AppDataSource.getRepository('QuarterActual');
+                try {
+                    await quarterActualRepo.delete({
+                        employee_code: existingRecord.employee_code,
+                        year: existingRecord.year,
+                        quarter: existingRecord.quarter,
+                    });
+                    console.log(`Deleted old QuarterActual for ${existingRecord.employee_code} Q${existingRecord.quarter} ${existingRecord.year}`);
+                } catch (quarterErr) {
+                    console.warn('Failed to delete old quarter actuals:', quarterErr?.message || quarterErr);
+                }
+            }
+
+            // 3. Delete the old file if it exists
             if (existingRecord.filePath) {
                 const oldFilePath = path.join(process.cwd(), existingRecord.filePath);
                 try {
@@ -616,7 +647,7 @@ export const createExport = async (req, res) => {
                 }
             }
 
-            // Remove the old record from database
+            // 4. Remove the old record from database
             await repo.remove(existingRecord);
             console.log(`Removed existing export record for user: ${employee_code} (Q${quarter} ${year})`);
         }
@@ -1001,17 +1032,23 @@ export const deleteExport = async (req, res) => {
             return res.status(404).json({ message: 'Export record not found' });
         }
 
-        if (record.filePath) {
-            const absPath = path.join(process.cwd(), record.filePath);
+        // CASCADE DELETE: Remove related data before deleting export
+        // 1. Delete related QuarterActual records
+        if (record.employee_code && record.year && record.quarter) {
+            const quarterActualRepo = AppDataSource.getRepository('QuarterActual');
             try {
-                await fs.promises.unlink(absPath);
-            } catch (fileErr) {
-                if (fileErr.code !== 'ENOENT') {
-                    console.warn(`Failed to remove export file ${absPath}:`, fileErr);
-                }
+                await quarterActualRepo.delete({
+                    employee_code: record.employee_code,
+                    year: record.year,
+                    quarter: record.quarter,
+                });
+                console.log(`Deleted QuarterActual for ${record.employee_code} Q${record.quarter} ${record.year}`);
+            } catch (quarterErr) {
+                console.warn('Failed to delete related quarter actuals:', quarterErr?.message || quarterErr);
             }
         }
 
+        // 2. Delete related BonusAward records
         if (record.employee_code && record.year && record.quarter) {
             const bonusRepo = AppDataSource.getRepository(BonusAward.options.name);
             try {
@@ -1020,14 +1057,29 @@ export const deleteExport = async (req, res) => {
                     year: record.year,
                     quarterAwarded: record.quarter,
                 });
+                console.log(`Deleted BonusAwards for ${record.employee_code} Q${record.quarter} ${record.year}`);
             } catch (bonusErr) {
                 console.warn('Failed to delete related bonus awards:', bonusErr?.message || bonusErr);
             }
         }
 
+        // 3. Delete the export file from disk
+        if (record.filePath) {
+            const absPath = path.join(process.cwd(), record.filePath);
+            try {
+                await fs.promises.unlink(absPath);
+                console.log(`Deleted export file: ${absPath}`);
+            } catch (fileErr) {
+                if (fileErr.code !== 'ENOENT') {
+                    console.warn(`Failed to remove export file ${absPath}:`, fileErr);
+                }
+            }
+        }
+
+        // 4. Delete the export record
         await repo.remove(record);
 
-        return res.json({ message: 'Export record deleted' });
+        return res.json({ message: 'Export record and related data deleted successfully' });
     } catch (err) {
         console.error('deleteExport error:', err);
         return res.status(500).json({ message: 'Failed to delete export' });

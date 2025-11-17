@@ -67,7 +67,7 @@ export function findActualColumnIndex(columns) {
  * @returns {number|null} Column index or null if not found
  */
 export function findNoteColumnIndex(columns) {
-    const idx = findColumnIndex(columns, "ghi chu", true);
+    const idx = findColumnIndex(columns, "ghi chú", true);
     return idx >= 0 ? idx : null;
 }
 

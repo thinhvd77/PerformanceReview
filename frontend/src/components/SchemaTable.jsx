@@ -135,8 +135,8 @@ export default function SchemaTable({
             Number.isNaN(ratioNum)
         )
             return "";
-        const asPercent = Number(ratioNum) * 100;
-        const rounded = Math.round(asPercent * 100) / 100;
+        // DB stores percent value directly (1 = 1%, not ratio 0.01)
+        const rounded = Math.round(Number(ratioNum) * 100) / 100;
         const s = formatNumberVN(rounded);
         return s === "" ? "" : `${s}%`;
     };
@@ -176,7 +176,8 @@ export default function SchemaTable({
         if (!numStr || numStr === ".") return "";
         const n = Number(numStr);
         if (!isFinite(n)) return "";
-        return String(n / 100); // % -> ratio
+        // Store as percent value directly (1% = 1, not 0.01)
+        return String(n);
     };
 
     // NUMBER input (soft & commit)

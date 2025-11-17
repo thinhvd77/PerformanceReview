@@ -1,0 +1,1849 @@
+{
+    "id": 35,
+    "name": "Mau 18-NV KTNQ HS-CN loai II",
+    "schema": {
+        "title": "Mau 18-NV KTNQ HS-CN loai II",
+        "fields": [
+            {
+                "key": "stt",
+                "label": "STT",
+                "type": "string",
+                "required": false,
+                "options": [],
+                "order": 1
+            },
+            {
+                "key": "tiêu_chí",
+                "label": "Tiêu chí",
+                "type": "string",
+                "required": false,
+                "options": [],
+                "order": 2
+            },
+            {
+                "key": "trọng_số",
+                "label": "Trọng số",
+                "type": "number",
+                "required": false,
+                "options": [],
+                "order": 3
+            },
+            {
+                "key": "điểm_chuẩn",
+                "label": "Điểm chuẩn",
+                "type": "number",
+                "required": false,
+                "options": [],
+                "order": 4
+            },
+            {
+                "key": "kế_hoạch",
+                "label": "Kế hoạch",
+                "type": "string",
+                "required": false,
+                "options": [],
+                "order": 5
+            },
+            {
+                "key": "thực_hiện",
+                "label": "Thực hiện",
+                "type": "string",
+                "required": false,
+                "options": [],
+                "order": 6
+            },
+            {
+                "key": "điểm_theo_mức_độ_hoàn_thành",
+                "label": "Điểm theo mức độ hoàn thành",
+                "type": "select",
+                "required": false,
+                "options": [
+                    "[object Object]"
+                ],
+                "order": 7
+            },
+            {
+                "key": "ghi_chú",
+                "label": "Ghi chú",
+                "type": "string",
+                "required": false,
+                "options": [],
+                "order": 8
+            }
+        ],
+        "table": {
+            "columns": [
+                {
+                    "key": "col_1",
+                    "label": "STT",
+                    "rowSpan": 1,
+                    "colSpan": 1,
+                    "hidden": false
+                },
+                {
+                    "key": "col_2",
+                    "label": "Tiêu chí",
+                    "rowSpan": 1,
+                    "colSpan": 1,
+                    "hidden": false
+                },
+                {
+                    "key": "col_3",
+                    "label": "Trọng số",
+                    "rowSpan": 1,
+                    "colSpan": 1,
+                    "hidden": false
+                },
+                {
+                    "key": "col_4",
+                    "label": "Điểm chuẩn",
+                    "rowSpan": 1,
+                    "colSpan": 1,
+                    "hidden": false
+                },
+                {
+                    "key": "col_5",
+                    "label": "Kế hoạch",
+                    "rowSpan": 1,
+                    "colSpan": 1,
+                    "hidden": false
+                },
+                {
+                    "key": "col_6",
+                    "label": "Thực hiện",
+                    "rowSpan": 1,
+                    "colSpan": 1,
+                    "hidden": false
+                },
+                {
+                    "key": "col_7",
+                    "label": "Điểm theo mức độ hoàn thành",
+                    "rowSpan": 1,
+                    "colSpan": 1,
+                    "hidden": false
+                },
+                {
+                    "key": "col_8",
+                    "label": "Ghi chú",
+                    "rowSpan": 1,
+                    "colSpan": 1,
+                    "hidden": false
+                }
+            ],
+            "rows": [
+                {
+                    "cells": [
+                        {
+                            "addr": "A2",
+                            "value": "A",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "B2",
+                            "value": "Điểm chuyên môn nghiệp vụ (cá nhân)",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "C2",
+                            "value": "0.8",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "numFmt": "0%",
+                            "percent": true
+                        },
+                        {
+                            "addr": "D2",
+                            "value": "90",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "formula": "=D3+D15",
+                            "percent": false
+                        },
+                        {
+                            "addr": "E2",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "F2",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "G2",
+                            "value": "[object Object]",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "formula": "=G3+G15+G16+G18-G17",
+                            "percent": false
+                        },
+                        {
+                            "addr": "H2",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": true,
+                            "percent": false
+                        }
+                    ]
+                },
+                {
+                    "cells": [
+                        {
+                            "addr": "A3",
+                            "value": "I",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "B3",
+                            "value": "Chỉ tiêu định lượng ",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "C3",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "D3",
+                            "value": "70",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "E3",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "F3",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "G3",
+                            "value": "[object Object]",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "formula": "=G4+G7+G8+G14",
+                            "percent": false
+                        },
+                        {
+                            "addr": "H3",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": true,
+                            "percent": false
+                        }
+                    ]
+                },
+                {
+                    "cells": [
+                        {
+                            "addr": "A4",
+                            "value": "1",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "B4",
+                            "value": "Chỉ tiêu nguồn vốn (quy đổi VND)",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "C4",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "D4",
+                            "value": "30",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "E4",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "F4",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "G4",
+                            "value": "[object Object]",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "formula": "=SUM(G5:G6)",
+                            "percent": false
+                        },
+                        {
+                            "addr": "H4",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": true,
+                            "percent": false
+                        }
+                    ]
+                },
+                {
+                    "cells": [
+                        {
+                            "addr": "A5",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "B5",
+                            "value": "Tăng trưởng nguồn vốn",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "C5",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "D5",
+                            "value": "18",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "E5",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": true,
+                            "percent": false
+                        },
+                        {
+                            "addr": "F5",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": true,
+                            "percent": false
+                        },
+                        {
+                            "addr": "G5",
+                            "value": "[object Object]",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "formula": "=MIN(D5,ROUND(F5*D5/IF(E5>0,E5,1),1))",
+                            "percent": false
+                        },
+                        {
+                            "addr": "H5",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": true,
+                            "percent": false
+                        }
+                    ]
+                },
+                {
+                    "cells": [
+                        {
+                            "addr": "A6",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "B6",
+                            "value": "Nguồn vốn bình quân",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "C6",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "D6",
+                            "value": "12",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "E6",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": true,
+                            "percent": false
+                        },
+                        {
+                            "addr": "F6",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": true,
+                            "percent": false
+                        },
+                        {
+                            "addr": "G6",
+                            "value": "[object Object]",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "formula": "=MIN(D6,ROUND(F6*D6/IF(E6>0,E6,1),1))",
+                            "percent": false
+                        },
+                        {
+                            "addr": "H6",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": true,
+                            "percent": false
+                        }
+                    ]
+                },
+                {
+                    "cells": [
+                        {
+                            "addr": "A7",
+                            "value": "2",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "B7",
+                            "value": "Thu dịch vụ",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "C7",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "D7",
+                            "value": "25",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "E7",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": true,
+                            "percent": false
+                        },
+                        {
+                            "addr": "F7",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": true,
+                            "percent": false
+                        },
+                        {
+                            "addr": "G7",
+                            "value": "[object Object]",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "formula": "=MIN(D7,ROUND(F7*D7/IF(E7>0,E7,1),1))",
+                            "percent": false
+                        },
+                        {
+                            "addr": "H7",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": true,
+                            "percent": false
+                        }
+                    ]
+                },
+                {
+                    "cells": [
+                        {
+                            "addr": "A8",
+                            "value": "3",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "B8",
+                            "value": "Phát hành thẻ và các dịch vụ khác",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "C8",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "D8",
+                            "value": "10",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "E8",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": true,
+                            "percent": false
+                        },
+                        {
+                            "addr": "F8",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": true,
+                            "percent": false
+                        },
+                        {
+                            "addr": "G8",
+                            "value": "[object Object]",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "formula": "=MIN(D8,ROUND(F8*D8/IF(E8>0,E8,1),1))",
+                            "percent": false
+                        },
+                        {
+                            "addr": "H8",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": true,
+                            "percent": false
+                        }
+                    ]
+                },
+                {
+                    "cells": [
+                        {
+                            "addr": "A9",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "B9",
+                            "value": "- Thẻ (ghi nợ nội địa; tín dụng; Lộc Việt)",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "C9",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "D9",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "E9",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "F9",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "G9",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "H9",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": true,
+                            "percent": false
+                        }
+                    ]
+                },
+                {
+                    "cells": [
+                        {
+                            "addr": "A10",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "B10",
+                            "value": "- Số lượng POS;",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "C10",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "D10",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "E10",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "F10",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "G10",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "H10",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": true,
+                            "percent": false
+                        }
+                    ]
+                },
+                {
+                    "cells": [
+                        {
+                            "addr": "A11",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "B11",
+                            "value": "- Số lượng QR;",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "C11",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "D11",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "E11",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "F11",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "G11",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "H11",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": true,
+                            "percent": false
+                        }
+                    ]
+                },
+                {
+                    "cells": [
+                        {
+                            "addr": "A12",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "B12",
+                            "value": "- Bảo hiểm (bảo an tín dụng, bảo hiểm vật chất)",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "C12",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "D12",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "E12",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "F12",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "G12",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "H12",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": true,
+                            "percent": false
+                        }
+                    ]
+                },
+                {
+                    "cells": [
+                        {
+                            "addr": "A13",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "B13",
+                            "value": "-E Banking (Emobile Banking/Internet Banking/SMS…)",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "C13",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "D13",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "E13",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "F13",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "G13",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "H13",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": true,
+                            "percent": false
+                        }
+                    ]
+                },
+                {
+                    "cells": [
+                        {
+                            "addr": "A14",
+                            "value": "4",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "B14",
+                            "value": "Chỉ tiêu tiếp thị tín dụng",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "C14",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "D14",
+                            "value": "5",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "E14",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": true,
+                            "percent": false
+                        },
+                        {
+                            "addr": "F14",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": true,
+                            "percent": false
+                        },
+                        {
+                            "addr": "G14",
+                            "value": "[object Object]",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "formula": "=MIN(D14,ROUND(F14*D14/IF(E14>0,E14,1),1))",
+                            "percent": false
+                        },
+                        {
+                            "addr": "H14",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": true,
+                            "percent": false
+                        }
+                    ]
+                },
+                {
+                    "cells": [
+                        {
+                            "addr": "A15",
+                            "value": "II",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "B15",
+                            "value": "Chỉ tiêu định tính",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "C15",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "D15",
+                            "value": "20",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "E15",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "F15",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "G15",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "H15",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": true,
+                            "percent": false
+                        }
+                    ]
+                },
+                {
+                    "cells": [
+                        {
+                            "addr": "A16",
+                            "value": "III",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "B16",
+                            "value": "Điểm cộng (tối đa 10 điểm)",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "C16",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "D16",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "E16",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "F16",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "G16",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "H16",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": true,
+                            "percent": false
+                        }
+                    ]
+                },
+                {
+                    "cells": [
+                        {
+                            "addr": "A17",
+                            "value": "IV",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "B17",
+                            "value": "Điểm trừ (tối đa 10 điểm)",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "C17",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "D17",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "E17",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "F17",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "G17",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "H17",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": true,
+                            "percent": false
+                        }
+                    ]
+                },
+                {
+                    "cells": [
+                        {
+                            "addr": "A18",
+                            "value": "V",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "B18",
+                            "value": "Điểm thưởng (tối đa 05 điểm)",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "C18",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "D18",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "E18",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "F18",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "G18",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "H18",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": true,
+                            "percent": false
+                        }
+                    ]
+                },
+                {
+                    "cells": [
+                        {
+                            "addr": "A19",
+                            "value": "B",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "B19",
+                            "value": "Điểm chuyên môn nghiệp vụ của phòng",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "C19",
+                            "value": "0.2",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "numFmt": "0%",
+                            "percent": true
+                        },
+                        {
+                            "addr": "D19",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "E19",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "F19",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "G19",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": true,
+                            "percent": false
+                        },
+                        {
+                            "addr": "H19",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": true,
+                            "percent": false
+                        }
+                    ]
+                },
+                {
+                    "cells": [
+                        {
+                            "addr": "A20",
+                            "value": "C",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "B20",
+                            "value": "Điểm chuyên môn nghiệp vụ sau khi nhân trọng số (C=A+B)",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "C20",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "D20",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "E20",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "F20",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "G20",
+                            "value": "[object Object]",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "formula": "=ROUND((G2*C2+G19*C19),1)",
+                            "percent": false
+                        },
+                        {
+                            "addr": "H20",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": true,
+                            "percent": false
+                        }
+                    ]
+                },
+                {
+                    "cells": [
+                        {
+                            "addr": "A21",
+                            "value": "D",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "B21",
+                            "value": "Điểm chấp hành nội quy lao động, văn hoá Agribank",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "C21",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "D21",
+                            "value": "10",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "E21",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "F21",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "G21",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": true,
+                            "percent": false
+                        },
+                        {
+                            "addr": "H21",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": true,
+                            "percent": false
+                        }
+                    ]
+                },
+                {
+                    "cells": [
+                        {
+                            "addr": "A22",
+                            "value": "E",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "B22",
+                            "value": "Tổng điểm khoán đạt được (E=C+D)",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "C22",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "D22",
+                            "value": "100",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "E22",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "F22",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "G22",
+                            "value": "[object Object]",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "formula": "=G21+G20",
+                            "percent": false
+                        },
+                        {
+                            "addr": "H22",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": true,
+                            "percent": false
+                        }
+                    ]
+                },
+                {
+                    "cells": [
+                        {
+                            "addr": "A23",
+                            "value": "F",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "B23",
+                            "value": "Hệ số hoàn thành công việc (F=E/100)",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "C23",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "D23",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "E23",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "F23",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "percent": false
+                        },
+                        {
+                            "addr": "G23",
+                            "value": "[object Object]",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": false,
+                            "formula": "=ROUND(G22/100,2)",
+                            "numFmt": "0.00",
+                            "percent": false
+                        },
+                        {
+                            "addr": "H23",
+                            "value": "",
+                            "rowSpan": 1,
+                            "colSpan": 1,
+                            "hidden": false,
+                            "input": true,
+                            "percent": false
+                        }
+                    ]
+                }
+            ]
+        },
+        "mergeRanges": []
+    },
+    "createdAt": "2025-09-17T16:40:35.322546",
+    "updatedAt": "2025-09-17T16:40:35.322546",
+    "assignedGroup": {
+        "branchId": "hs",
+        "departmentId": "hs-kt",
+        "positionId": "hs-kt-nv"
+    },
+    "assignedGroups": [
+        {
+            "branchId": "hs",
+            "departmentId": "hs-kt",
+            "positionId": "hs-kt-nv"
+        },
+        {
+            "branchId": "cn6",
+            "departmentId": "cn6-kt",
+            "positionId": "cn6-kt-nv"
+        },
+        {
+            "branchId": "nh",
+            "departmentId": "nh-kt",
+            "positionId": "nh-kt-nv"
+        }
+    ]
+}

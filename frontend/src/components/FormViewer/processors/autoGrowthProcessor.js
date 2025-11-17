@@ -169,7 +169,7 @@ export function processGrowthRules({
                     // Award points if decreased (decrease > 0)
                     if (decrease > 0) {
                         bonusPoints = rule.fixedPoints || 0;
-                        noteText = `Giảm từ ${previousActual * 100}% (Q${previousQuarterActuals.previous_quarter}) xuống ${currentActual * 100}%`;
+                        noteText = `Giảm từ ${previousActual}% (Q${previousQuarterActuals.previous_quarter}) xuống ${currentActual}%`;
                     } else {
                         bonusPoints = 0;
                         noteText = "";

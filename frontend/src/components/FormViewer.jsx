@@ -40,8 +40,20 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useParams } from "react-router-dom";
 import api from "../services/api.js";
-import { Button, Spin, Alert, Typography, Empty, Select, Space } from "antd";
+import {
+    Button,
+    Spin,
+    Alert,
+    Typography,
+    Empty,
+    DatePicker,
+    Space,
+} from "antd";
+import dayjs from "dayjs";
+import quarterOfYear from "dayjs/plugin/quarterOfYear";
 import SchemaTable from "./SchemaTable.jsx";
+
+dayjs.extend(quarterOfYear);
 import {
     buildInitialInputs,
     buildCellMap,
@@ -154,6 +166,9 @@ export default function FormViewer({ formId }) {
 
     // State for previous quarter actuals data (for Nợ xấu, Nợ nhóm 2)
     const [previousQuarterActuals, setPreviousQuarterActuals] = useState(null);
+
+    // State to store bonus awards pending database save (saved on export)
+    const [pendingBonusAwards, setPendingBonusAwards] = useState(null);
 
     // Build cell map & tính công thức dựa trên bảng "sống"
     const cellMap = useMemo(() => buildCellMap(table), [table]);
@@ -268,6 +283,132 @@ export default function FormViewer({ formId }) {
             cancelled = true;
         };
     }, [selectedQuarter, selectedYear]);
+
+    /**
+     * Display previous quarter actual values in Note column
+     * for "Nợ xấu" and "Nợ nhóm 2" rows
+     * Must run AFTER quarterPlan has loaded to avoid being cleared
+     */
+    useEffect(() => {
+        console.log("[Previous Quarter Notes] Effect triggered", {
+            tableReady,
+            hasActuals: !!previousQuarterActuals?.actuals,
+            hasRows: !!table?.rows,
+            noteColIdx,
+            quarterPlanLoaded: quarterPlanLoadedRef.current,
+        });
+
+        if (
+            !tableReady ||
+            !previousQuarterActuals?.actuals ||
+            !table?.rows ||
+            noteColIdx == null ||
+            noteColIdx < 0
+        ) {
+            console.warn(
+                "[Previous Quarter Notes] Skipping - conditions not met"
+            );
+            return;
+        }
+
+        // Wait for quarter plan to load first to avoid being cleared by quarter change effect
+        const loadKey = `${user?.username}-Q${selectedQuarter}-${selectedYear}`;
+        if (quarterPlanLoadedRef.current !== loadKey) {
+            console.warn(
+                "[Previous Quarter Notes] Waiting for quarter plan to load first"
+            );
+            return;
+        }
+
+        const { actuals, previous_quarter, previous_year } =
+            previousQuarterActuals;
+        const updates = {};
+
+        console.log("[Previous Quarter Notes] Processing rows...", {
+            totalRows: table.rows.length,
+            noteColIdx,
+            actuals,
+        });
+
+        // Find rows with "Nợ xấu" and "Nợ nhóm 2" labels
+        table.rows.forEach((row, idx) => {
+            if (!row.cells || row.cells.length === 0) return;
+
+            const labelCell = row.cells[1]; // Column B - "Chỉ tiêu"
+            const label = labelCell?.value || "";
+
+            // Check for "Nợ xấu" row
+            if (
+                label.includes("Nợ xấu") &&
+                actuals.bad_loan_ratio_actual != null
+            ) {
+                const noteCell = row.cells[noteColIdx];
+                console.log(`[Row ${idx}] Found Nợ xấu`, {
+                    label,
+                    noteCell: noteCell?.addr,
+                    value: actuals.bad_loan_ratio_actual,
+                });
+
+                if (noteCell?.addr) {
+                    const value = parseFloat(actuals.bad_loan_ratio_actual);
+                    if (!isNaN(value)) {
+                        const noteText = value;
+                        updates[noteCell.addr] = noteText;
+                        console.log(
+                            `[Row ${idx}] Will update ${noteCell.addr} = ${noteText}`
+                        );
+                    }
+                }
+            }
+
+            // Check for "Nợ nhóm 2" row
+            if (
+                label.includes("Nợ nhóm 2") &&
+                actuals.group_2_loan_ratio_actual != null
+            ) {
+                const noteCell = row.cells[noteColIdx];
+                console.log(`[Row ${idx}] Found Nợ nhóm 2`, {
+                    label,
+                    noteCell: noteCell?.addr,
+                    value: actuals.group_2_loan_ratio_actual,
+                });
+
+                if (noteCell?.addr) {
+                    const value = parseFloat(actuals.group_2_loan_ratio_actual);
+                    if (!isNaN(value)) {
+                        const noteText = value;
+                        updates[noteCell.addr] = noteText;
+                        console.log(
+                            `[Row ${idx}] Will update ${noteCell.addr} = ${noteText}`
+                        );
+                    }
+                }
+            }
+        });
+
+        // Apply updates if any
+        if (Object.keys(updates).length > 0) {
+            console.log("[Previous Quarter Notes] Applying updates:", updates);
+            setCellInputs((prev) => {
+                const next = { ...prev, ...updates };
+                console.log(
+                    "[Previous Quarter Notes] cellInputs updated",
+                    next
+                );
+                return next;
+            });
+        } else {
+            console.warn("[Previous Quarter Notes] No updates to apply");
+        }
+    }, [
+        tableReady,
+        previousQuarterActuals,
+        table,
+        noteColIdx,
+        user?.username,
+        selectedQuarter,
+        selectedYear,
+    ]);
 
     /**
      * Load saved quarter plan ("Kế hoạch quý") values for the active quarter/year.
@@ -611,6 +752,11 @@ export default function FormViewer({ formId }) {
                 if (result.virtualRowNo) setVirtualRowNo(result.virtualRowNo);
                 if (result.childrenScoreAddrs)
                     setChildrenScoreAddrs(result.childrenScoreAddrs);
+
+                // Store bonus awards to be saved on export
+                if (result.bonusAwardsToRecord) {
+                    setPendingBonusAwards(result.bonusAwardsToRecord);
+                }
             } finally {
                 bonusRulesProcessingRef.current = false;
             }
@@ -643,6 +789,7 @@ export default function FormViewer({ formId }) {
             baseTable,
             scoreColIdx,
             api,
+            pendingBonusAwards, // Pass bonus awards to save during export
         });
 
         if (!resetState) return;
@@ -653,6 +800,7 @@ export default function FormViewer({ formId }) {
         setCriteriaSelectValueByRow(resetState.criteriaSelectValueByRow);
         setCellInputs(resetState.cellInputs);
         setTable(resetState.table);
+        setPendingBonusAwards(null); // Clear pending awards after export
         manualEditedAddrsRef.current = new Set();
     };
 
@@ -727,30 +875,23 @@ export default function FormViewer({ formId }) {
                 }}
             >
                 <Space>
-                    <span style={{ fontWeight: 500 }}>Quý:</span>
-                    <Select
-                        value={selectedQuarter}
-                        onChange={setSelectedQuarter}
-                        style={{ width: 100 }}
-                        options={[
-                            { value: 1, label: "Quý 1" },
-                            { value: 2, label: "Quý 2" },
-                            { value: 3, label: "Quý 3" },
-                            { value: 4, label: "Quý 4" },
-                        ]}
-                    />
-                </Space>
-                <Space>
-                    <span style={{ fontWeight: 500 }}>Năm:</span>
-                    <Select
-                        value={selectedYear}
-                        onChange={setSelectedYear}
-                        style={{ width: 100 }}
-                        options={[
-                            { value: 2024, label: "2024" },
-                            { value: 2025, label: "2025" },
-                            { value: 2026, label: "2026" },
-                        ]}
+                    <span style={{ fontWeight: 500 }}>Chọn quý:</span>
+                    <DatePicker
+                        picker="quarter"
+                        value={dayjs()
+                            .year(selectedYear)
+                            .quarter(selectedQuarter)}
+                        onChange={(date) => {
+                            if (date) {
+                                setSelectedQuarter(date.quarter());
+                                setSelectedYear(date.year());
+                            }
+                        }}
+                        format="[Quý] Q YYYY"
+                        placeholder="Chọn quý"
+                        style={{ width: 150 }}
+                        allowClear={false}
+                        inputReadOnly={true}
                     />
                 </Space>
                 <Button type="primary" onClick={handleExport}>
