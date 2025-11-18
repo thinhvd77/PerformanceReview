@@ -12,6 +12,7 @@ import {
     Modal,
     message,
     Select,
+    DatePicker,
 } from "antd";
 import { ReloadOutlined, DownloadOutlined } from "@ant-design/icons";
 import api from "../../services/api.js";
@@ -21,6 +22,10 @@ import { parseExcelForViewer } from "../../utils/parseExcelForViewer.js";
 import logo from "../../assets/logo_png.png";
 import { saveAs } from "file-saver";
 import { useAuth } from "../../contexts/authContext.jsx";
+import dayjs from "dayjs";
+import quarterOfYear from "dayjs/plugin/quarterOfYear";
+
+dayjs.extend(quarterOfYear);
 const { Header, Content } = Layout;
 const { Title, Text } = Typography;
 const formatDateTime = (value) => {
@@ -98,6 +103,9 @@ export default function DashboardPage() {
     const [error, setError] = useState("");
     const [branch, setBranch] = useState("");
     const [department, setDepartment] = useState("");
+    const [selectedQuarterYear, setSelectedQuarterYear] = useState(
+        dayjs().startOf("quarter")
+    );
     const [submissions, setSubmissions] = useState([]);
     const [selectedId, setSelectedId] = useState(null);
     const [isModalVisible, setIsModalVisible] = useState(false);
@@ -120,7 +128,7 @@ export default function DashboardPage() {
 
     // Load submissions dựa trên phòng ban được chọn (dành cho isTHManager)
     const loadSubmissionsByDepartment = useCallback(
-        async (branchId, departmentId) => {
+        async (branchId, departmentId, quarterYear = null) => {
             if (!branchId || !departmentId) {
                 setSubmissions([]);
                 return;
@@ -129,14 +137,20 @@ export default function DashboardPage() {
             setLoading(true);
             setError("");
             try {
+                const params = {
+                    branch: branchId,
+                    department: departmentId,
+                };
+
+                // Add quarter and year params if quarterYear is provided
+                if (quarterYear) {
+                    params.quarter = quarterYear.quarter();
+                    params.year = quarterYear.year();
+                }
+
                 const { data } = await api.get(
                     "/exports/department-submissions",
-                    {
-                        params: {
-                            branch: branchId,
-                            department: departmentId,
-                        },
-                    }
+                    { params }
                 );
                 applyResponse(data);
             } catch (e) {
@@ -210,11 +224,16 @@ export default function DashboardPage() {
     useEffect(() => {
         if (!isTHManager || !targetBranch || !targetDepartment) return;
 
-        loadSubmissionsByDepartment(targetBranch, targetDepartment);
+        loadSubmissionsByDepartment(
+            targetBranch,
+            targetDepartment,
+            selectedQuarterYear
+        );
     }, [
         isTHManager,
         targetBranch,
         targetDepartment,
+        selectedQuarterYear,
         loadSubmissionsByDepartment,
     ]);
     const handleRefresh = useCallback(async () => {
@@ -223,7 +242,8 @@ export default function DashboardPage() {
             if (targetBranch && targetDepartment) {
                 await loadSubmissionsByDepartment(
                     targetBranch,
-                    targetDepartment
+                    targetDepartment,
+                    selectedQuarterYear
                 );
             }
             return;
@@ -232,7 +252,15 @@ export default function DashboardPage() {
         setRefreshing(true);
         setError("");
         try {
-            const { data } = await api.get("/exports/department-submissions");
+            const params = {};
+            if (selectedQuarterYear) {
+                params.quarter = selectedQuarterYear.quarter();
+                params.year = selectedQuarterYear.year();
+            }
+
+            const { data } = await api.get("/exports/department-submissions", {
+                params,
+            });
             applyResponse(data);
         } catch (e) {
             const msg =
@@ -252,6 +280,7 @@ export default function DashboardPage() {
         isTHManager,
         targetBranch,
         targetDepartment,
+        selectedQuarterYear,
         loadSubmissionsByDepartment,
     ]);
 
@@ -280,14 +309,23 @@ export default function DashboardPage() {
             const effectiveDepartment = isTHManager
                 ? targetDepartment
                 : department;
+
+            const params = {
+                ...(effectiveBranch ? { branch: effectiveBranch } : {}),
+                ...(effectiveDepartment
+                    ? { department: effectiveDepartment }
+                    : {}),
+            };
+
+            // Add quarter and year params if selectedQuarterYear is set
+            if (selectedQuarterYear) {
+                params.quarter = selectedQuarterYear.quarter();
+                params.year = selectedQuarterYear.year();
+            }
+
             const res = await api.get("/exports/department-summary", {
                 responseType: "blob",
-                params: {
-                    ...(effectiveBranch ? { branch: effectiveBranch } : {}),
-                    ...(effectiveDepartment
-                        ? { department: effectiveDepartment }
-                        : {}),
-                },
+                params,
             });
             const blob = new Blob([res.data], {
                 type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -304,7 +342,10 @@ export default function DashboardPage() {
                 getDepartmentLabel(effectiveBranch, effectiveDepartment) ||
                 effectiveDepartment ||
                 department;
-            const fileName = `Tong_ket_xep_loai_${sanitize(
+            const quarterPart = selectedQuarterYear
+                ? `Q${selectedQuarterYear.quarter()}_${selectedQuarterYear.year()}_`
+                : "";
+            const fileName = `Tong_ket_xep_loai_${quarterPart}${sanitize(
                 branchLabel
             )}_${sanitize(departmentLabel)}_${stamp}.xlsx`;
             saveAs(blob, fileName);
@@ -324,8 +365,61 @@ export default function DashboardPage() {
         isTHManager,
         targetBranch,
         targetDepartment,
+        selectedQuarterYear,
         user?.branch,
     ]);
+
+    const handleExportBranch = useCallback(async () => {
+        if (!targetBranch) {
+            message.warning("Vui lòng chọn chi nhánh muốn xuất");
+            return;
+        }
+        setExporting(true);
+        try {
+            const params = {
+                branch: targetBranch,
+            };
+
+            // Add quarter and year params if selectedQuarterYear is set
+            if (selectedQuarterYear) {
+                params.quarter = selectedQuarterYear.quarter();
+                params.year = selectedQuarterYear.year();
+            }
+
+            const res = await api.get("/exports/branch-summary", {
+                responseType: "blob",
+                params,
+            });
+            const blob = new Blob([res.data], {
+                type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            });
+            const sanitize = (value) =>
+                String(value || "")
+                    .trim()
+                    .normalize("NFD")
+                    .replace(/[\u0300-\u036f]/g, "")
+                    .replace(/[^a-zA-Z0-9-_]+/g, "_") || "tong_hop";
+            const stamp = new Date().toISOString().slice(0, 10);
+            const branchLabel = getBranchLabel(targetBranch);
+            const quarterPart = selectedQuarterYear
+                ? `Q${selectedQuarterYear.quarter()}_${selectedQuarterYear.year()}_`
+                : "";
+            const fileName = `Tong_ket_xep_loai_${quarterPart}Chi_nhanh_${sanitize(
+                branchLabel
+            )}_${stamp}.xlsx`;
+            saveAs(blob, fileName);
+            message.success("Đã tải file tổng kết toàn chi nhánh");
+        } catch (e) {
+            const msg =
+                e?.response?.data?.message ||
+                e.message ||
+                "Xuất file tổng kết toàn chi nhánh thất bại";
+            message.error(msg);
+        } finally {
+            setExporting(false);
+        }
+    }, [targetBranch, selectedQuarterYear]);
+
     const handleViewForm = useCallback((record) => {
         if (!record?.id) return;
         setSelectedId(record.id);
@@ -595,6 +689,21 @@ export default function DashboardPage() {
                                     >
                                         Xuất tổng kết xếp loại
                                     </Button>
+                                    {isTHManager && (
+                                        <Button
+                                            type="default"
+                                            icon={<DownloadOutlined />}
+                                            onClick={handleExportBranch}
+                                            loading={exporting}
+                                            disabled={loading || !targetBranch}
+                                            style={{
+                                                borderColor: "#ae1c3f",
+                                                color: "#ae1c3f",
+                                            }}
+                                        >
+                                            Xuất tổng kết toàn chi nhánh
+                                        </Button>
+                                    )}
                                 </Space>
                             }
                         >
@@ -643,6 +752,20 @@ export default function DashboardPage() {
                                             </Select.Option>
                                         ))}
                                     </Select>
+                                    <DatePicker
+                                        picker="quarter"
+                                        value={selectedQuarterYear}
+                                        onChange={(value) => {
+                                            setSelectedQuarterYear(
+                                                value ||
+                                                    dayjs().startOf("quarter")
+                                            );
+                                        }}
+                                        format="[Quý] Q YYYY"
+                                        placeholder="Chọn quý"
+                                        style={{ minWidth: 180 }}
+                                        allowClear={false}
+                                    />
                                 </Space>
                             )}
                             {tableContent}

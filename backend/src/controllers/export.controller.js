@@ -244,13 +244,25 @@ const getManagerContext = async (req, options = {}) => {
     return { manager, branch: effectiveBranch, department: effectiveDepartment };
 };
 
-const getLatestRecordsForDepartment = async (branch, department) => {
+const getLatestRecordsForDepartment = async (branch, department, quarter = null, year = null) => {
     const exportRepo = AppDataSource.getRepository(ExportRecord.options.name);
-    const records = await exportRepo
+    const qb = exportRepo
         .createQueryBuilder('record')
         .leftJoinAndSelect('record.employee', 'employee')
         .where('employee.branch = :branch', { branch })
-        .andWhere('employee.department = :department', { department })
+        .andWhere('employee.department = :department', { department });
+
+    // Apply quarter filter if provided
+    if (quarter !== null && Number.isInteger(quarter) && quarter >= 1 && quarter <= 4) {
+        qb.andWhere('record.quarter = :quarter', { quarter });
+    }
+
+    // Apply year filter if provided
+    if (year !== null && Number.isInteger(year)) {
+        qb.andWhere('record.year = :year', { year });
+    }
+
+    const records = await qb
         .orderBy('record.createdAt', 'DESC')
         .getMany();
 
@@ -704,7 +716,14 @@ export const listDepartmentSubmissions = async (req, res) => {
         // This handles branch/department validation correctly
         const { branch, department } = await getManagerContext(req, { allowDepartmentOverride: true });
 
-        const records = await getLatestRecordsForDepartment(branch, department);
+        // Parse optional quarter and year filters
+        const quarterParam = req.query.quarter ? parseInt(req.query.quarter, 10) : null;
+        const yearParam = req.query.year ? parseInt(req.query.year, 10) : null;
+
+        const quarter = (quarterParam && quarterParam >= 1 && quarterParam <= 4) ? quarterParam : null;
+        const year = (yearParam && yearParam >= 2020) ? yearParam : null;
+
+        const records = await getLatestRecordsForDepartment(branch, department, quarter, year);
 
         const submissions = records.map((record) => ({
             id: record.id,
@@ -713,11 +732,15 @@ export const listDepartmentSubmissions = async (req, res) => {
             submittedAt: formatDateTimeVN(toDate(record.createdAt)),
             fileName: record.fileName,
             table: record.table,
+            quarter: record.quarter,
+            year: record.year,
         }));
 
         return res.json({
             branch,
             department,
+            quarter,
+            year,
             submissions,
         });
     } catch (err) {
@@ -736,7 +759,15 @@ export const listDepartmentSubmissions = async (req, res) => {
 export const exportDepartmentSummary = async (req, res) => {
     try {
         const { branch, department } = await getManagerContext(req, { allowDepartmentOverride: true });
-        const records = await getLatestRecordsForDepartment(branch, department);
+
+        // Parse optional quarter and year filters
+        const quarterParam = req.query.quarter ? parseInt(req.query.quarter, 10) : null;
+        const yearParam = req.query.year ? parseInt(req.query.year, 10) : null;
+
+        const quarter = (quarterParam && quarterParam >= 1 && quarterParam <= 4) ? quarterParam : null;
+        const year = (yearParam && yearParam >= 2020) ? yearParam : null;
+
+        const records = await getLatestRecordsForDepartment(branch, department, quarter, year);
 
         if (!records.length) {
             return res.status(400).json({ message: 'Không có dữ liệu để xuất' });
@@ -963,13 +994,10 @@ export const exportDepartmentSummary = async (req, res) => {
         const safeBranch = sanitizeForFilename(branchName);
         const safeDepartment = sanitizeForFilename(departmentName);
 
-        // Get quarter and year from the first record (all records should be from same quarter/year)
-        const firstRecord = records[0];
-        const quarter = firstRecord?.quarter || null;
-        const year = firstRecord?.year || null;
-
-        // Build filename with quarter/year if available
-        const quarterYearPart = (quarter && year) ? `Q${quarter}_${year}_` : '';
+        // Build filename with quarter/year if available (use filter values if provided, otherwise use record values)
+        const fileQuarter = quarter || records[0]?.quarter || null;
+        const fileYear = year || records[0]?.year || null;
+        const quarterYearPart = (fileQuarter && fileYear) ? `Q${fileQuarter}_${fileYear}_` : '';
         const now = new Date();
         const stamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
 
@@ -987,6 +1015,258 @@ export const exportDepartmentSummary = async (req, res) => {
         }
         const payload = {
             message: err.status ? err.message : 'Failed to export department summary',
+        };
+        if (!err.status) payload.error = err.message;
+        return res.status(status).json(payload);
+    }
+};
+
+export const exportBranchSummary = async (req, res) => {
+    try {
+        // Only allow special user 201100069 to access this endpoint
+        const username = req.user?.username;
+        if (username !== '201100069') {
+            return res.status(403).json({ message: 'Chỉ user 201100069 mới có quyền xuất tổng kết toàn chi nhánh' });
+        }
+
+        // Parse branch, quarter, and year from query
+        const targetBranch = (req.query?.targetBranch ?? req.query?.branch ?? '').toString().trim();
+        if (!targetBranch || !orgData.departments?.[targetBranch]) {
+            return res.status(400).json({ message: 'Vui lòng chọn chi nhánh hợp lệ' });
+        }
+
+        const quarterParam = req.query.quarter ? parseInt(req.query.quarter, 10) : null;
+        const yearParam = req.query.year ? parseInt(req.query.year, 10) : null;
+
+        const quarter = (quarterParam && quarterParam >= 1 && quarterParam <= 4) ? quarterParam : null;
+        const year = (yearParam && yearParam >= 2020) ? yearParam : null;
+
+        // Get all departments in the selected branch
+        const departmentsInBranch = orgData.departments[targetBranch] || [];
+        if (!departmentsInBranch.length) {
+            return res.status(400).json({ message: 'Chi nhánh không có phòng ban nào' });
+        }
+
+        // Collect all records for all departments in the branch
+        const allDepartmentData = [];
+        for (const dept of departmentsInBranch) {
+            const records = await getLatestRecordsForDepartment(targetBranch, dept.id, quarter, year);
+            if (records.length > 0) {
+                const summaries = await Promise.all(records.map(async (record) => ({
+                    record,
+                    summary: await getRecordSummary(record),
+                })));
+                allDepartmentData.push({
+                    departmentId: dept.id,
+                    departmentName: dept.name,
+                    summaries,
+                });
+            }
+        }
+
+        if (!allDepartmentData.length) {
+            return res.status(400).json({ message: 'Không có dữ liệu để xuất cho chi nhánh này' });
+        }
+
+        // Create Excel workbook
+        const branchName = mapBranchName(targetBranch);
+        const workbook = new ExcelJS.Workbook();
+        const ws = workbook.addWorksheet('Tong ket chi nhanh');
+
+        ws.pageSetup = {
+            paperSize: 9, // A4
+            orientation: 'portrait',
+            horizontalCentered: true,
+            margins: { left: 0.25, right: 0.25, top: 0.25, bottom: 0.25, header: 0.05, footer: 0.05 },
+            fitToHeight: 0,
+        };
+
+        // Header section
+        ws.mergeCells('A1:B1');
+        ws.getCell('A1').value = 'NGÂN HÀNG NÔNG NGHIỆP';
+        ws.getCell('A1').font = { name: 'Times New Roman', size: 12 };
+        ws.getCell('A1').alignment = { horizontal: 'center' };
+
+        ws.mergeCells('A2:B2');
+        ws.getCell('A2').value = 'VÀ PHÁT TRIỂN NÔNG THÔN VIỆT NAM';
+        ws.getCell('A2').font = { name: 'Times New Roman', size: 12 };
+        ws.getCell('A2').alignment = { horizontal: 'center' };
+
+        ws.mergeCells('A3:B3');
+        ws.getCell('A3').value = branchName === 'Hội sở' ? 'CHI NHÁNH BẮC TPHCM' : branchName.toUpperCase();
+        ws.getCell('A3').font = { name: 'Times New Roman', size: 12, bold: true };
+        ws.getCell('A3').alignment = { horizontal: 'center' };
+
+        ws.mergeCells('D1:F1');
+        ws.getCell('D1').value = 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM';
+        ws.getCell('D1').font = { name: 'Times New Roman', size: 12, bold: true };
+        ws.getCell('D1').alignment = { horizontal: 'center' };
+
+        ws.mergeCells('D2:F2');
+        ws.getCell('D2').value = 'Độc lập - Tự do - Hạnh phúc';
+        ws.getCell('D2').font = { name: 'Times New Roman', size: 12, bold: true, underline: true };
+        ws.getCell('D2').alignment = { horizontal: 'center' };
+
+        ws.getCell('F4').value = 'Phụ lục 05/KTL-TH';
+        ws.getCell('F4').font = { name: 'Times New Roman', size: 12, italic: true };
+        ws.getCell('F4').alignment = { horizontal: 'right' };
+
+        ws.addRow([]);
+
+        ws.getRow(6).height = 40;
+        ws.mergeCells('B6:E6');
+        ws.getCell('B6').value = 'TỔNG HỢP HỆ SỐ HOÀN THÀNH CÔNG VIỆC VÀ XẾP LOẠI \n CỦA NGƯỜI LAO ĐỘNG - TOÀN CHI NHÁNH';
+        ws.getCell('B6').font = { name: 'Times New Roman', size: 15, bold: true };
+        ws.getCell('B6').alignment = { horizontal: 'center', wrapText: true };
+
+        // Get quarter and year for display
+        const firstRecord = allDepartmentData[0]?.summaries[0]?.record;
+        const recordQuarter = firstRecord?.quarter;
+        const recordYear = firstRecord?.year;
+
+        let displayQuarterRoman = 'I';
+        let displayYear = new Date().getFullYear();
+
+        if (recordQuarter && recordYear) {
+            const quarterMap = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV' };
+            displayQuarterRoman = quarterMap[recordQuarter] || 'I';
+            displayYear = recordYear;
+        } else {
+            const month = new Date().getMonth() + 1;
+            const currentQuarter = Math.ceil(month / 3);
+            const quarterMap = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV' };
+            displayQuarterRoman = quarterMap[currentQuarter] || 'I';
+        }
+
+        ws.mergeCells('B7:E7');
+        ws.getCell('B7').value = `QUÝ ${displayQuarterRoman} NĂM ${displayYear}`;
+        ws.getCell('B7').font = { name: 'Times New Roman', size: 12, bold: true };
+        ws.getCell('B7').alignment = { horizontal: 'center' };
+
+        ws.addRow([]);
+        ws.addRow([]);
+
+        // Set columns
+        ws.columns = [
+            { key: 'stt', width: 6 },
+            { key: 'employeeName', width: 37 },
+            { key: 'department', width: 14 },
+            { key: 'position', width: 10 },
+            { key: 'ratio', width: 27 },
+            { key: 'classification', width: 10 },
+        ];
+
+        const shortDeptNameMap = {
+            'Phòng Kế toán & ngân quỹ': 'P.KT&NQ',
+            'Phòng giao dịch Bình Tây': 'PGD Bình Tây',
+            'Phòng Khách hàng cá nhân': 'P.KHCN',
+            'Phòng Khách hàng doanh nghiệp': 'P.KHDN',
+            'Phòng Khách hàng': 'P.KH',
+            'Phòng Tổng hợp': 'P.TH',
+            'Phòng Kiểm tra giám sát nội bộ': 'P.KTGSNB',
+            'Phòng Kế hoạch & quản lý rủi ro': 'P.KH&QLRR',
+            'Ban giám đốc': 'BGĐ',
+        };
+
+        // Add table header
+        const headerRow = ws.addRow({
+            stt: 'STT',
+            employeeName: 'Họ và tên',
+            department: 'Đơn vị/phòng',
+            position: 'Chức vụ',
+            ratio: 'Hệ số hoàn thành \n hiệu quả công việc',
+            classification: 'Xếp loại',
+        });
+        headerRow.font = { name: 'Times New Roman', size: 12, bold: true };
+        headerRow.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+        headerRow.eachCell((cell) => {
+            cell.border = {
+                top: { style: 'thin' },
+                left: { style: 'thin' },
+                bottom: { style: 'thin' },
+                right: { style: 'thin' }
+            };
+        });
+
+        // Add data rows for all departments
+        let globalIndex = 1;
+        for (const deptData of allDepartmentData) {
+            const shortDeptName = shortDeptNameMap[deptData.departmentName] || deptData.departmentName;
+
+            for (const { record, summary } of deptData.summaries) {
+                const ratioValue = (summary?.ratio !== null && summary?.ratio !== undefined && Number.isFinite(summary?.ratio))
+                    ? Number(summary.ratio)
+                    : null;
+                const ratioText = summary?.ratioText ? String(summary.ratioText) : '';
+
+                const row = ws.addRow({
+                    stt: globalIndex++,
+                    employeeName: record.employee?.fullname || record.employee_code || '',
+                    department: shortDeptName,
+                    position: summary?.position || '',
+                    ratio: ratioValue ?? ratioText,
+                    classification: summary?.classification || '',
+                });
+
+                row.font = { name: 'Times New Roman', size: 12 };
+                row.eachCell((cell) => {
+                    cell.border = {
+                        top: { style: 'thin' },
+                        left: { style: 'thin' },
+                        bottom: { style: 'thin' },
+                        right: { style: 'thin' }
+                    };
+                    cell.alignment = { vertical: 'middle', wrapText: true };
+                });
+
+                if (ratioValue !== null) {
+                    row.getCell('ratio').value = ratioValue;
+                    row.getCell('ratio').numFmt = '0.00';
+                    row.getCell('ratio').alignment = { horizontal: 'center', vertical: 'middle' };
+                }
+                row.getCell('position').alignment = { horizontal: 'center', vertical: 'middle' };
+                row.getCell('classification').alignment = { horizontal: 'center', vertical: 'middle' };
+                row.getCell('stt').alignment = { horizontal: 'center', vertical: 'middle' };
+            }
+        }
+
+        ws.addRow([]);
+
+        ws.mergeCells(`A${ws.lastRow.number + 1}:B${ws.lastRow.number + 1}`);
+        ws.getCell(`A${ws.lastRow.number}`).value = 'LẬP BIỂU';
+        ws.getCell(`A${ws.lastRow.number}`).font = { name: 'Times New Roman', size: 12, bold: true };
+        ws.getCell(`A${ws.lastRow.number}`).alignment = { horizontal: 'center' };
+
+        ws.mergeCells(`D${ws.lastRow.number}:F${ws.lastRow.number}`);
+        ws.getCell(`D${ws.lastRow.number}`).value = 'GIÁM ĐỐC CHI NHÁNH';
+        ws.getCell(`D${ws.lastRow.number}`).font = { name: 'Times New Roman', size: 12, bold: true };
+        ws.getCell(`D${ws.lastRow.number}`).alignment = { horizontal: 'center' };
+
+        // Generate Excel buffer and send
+        const buffer = await workbook.xlsx.writeBuffer();
+        const output = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
+        const safeBranch = sanitizeForFilename(branchName);
+
+        const fileQuarter = quarter || recordQuarter || null;
+        const fileYear = year || recordYear || null;
+        const quarterYearPart = (fileQuarter && fileYear) ? `Q${fileQuarter}_${fileYear}_` : '';
+        const now = new Date();
+        const stamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader(
+            'Content-Disposition',
+            `attachment; filename="Tong_ket_xep_loai_${quarterYearPart}Chi_nhanh_${safeBranch}_${stamp}.xlsx"`
+        );
+
+        return res.send(output);
+    } catch (err) {
+        const status = err.status || 500;
+        if (!err.status) {
+            console.error('Failed to export branch summary:', err);
+        }
+        const payload = {
+            message: err.status ? err.message : 'Failed to export branch summary',
         };
         if (!err.status) payload.error = err.message;
         return res.status(status).json(payload);

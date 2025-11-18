@@ -2,7 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import path from 'path';
 import { authenticateToken, authorizeRole } from '../middlewares/auth.js';
-import { listExports, createExport, getExport, downloadExport, listDepartmentSubmissions, exportDepartmentSummary, deleteExport } from '../controllers/export.controller.js';
+import { listExports, createExport, getExport, downloadExport, listDepartmentSubmissions, exportDepartmentSummary, exportBranchSummary, deleteExport } from '../controllers/export.controller.js';
 
 const router = express.Router();
 
@@ -20,6 +20,7 @@ const upload = multer({ storage });
 router.get('/', authenticateToken, listExports);
 router.get('/department-submissions', authenticateToken, listDepartmentSubmissions);
 router.get('/department-summary', authenticateToken, exportDepartmentSummary);
+router.get('/branch-summary', authenticateToken, exportBranchSummary);
 router.post('/', authenticateToken, upload.single('file'), createExport);
 router.get('/:id', authenticateToken, getExport);
 router.get('/:id/download', authenticateToken, downloadExport);
