@@ -103,9 +103,24 @@ export function handleSectionChooseLogic({
             ...newRow.cells[scoreColIdx],
             addr: childScoreAddr,
             input: false,
-            formula: `=MAX(0, 10-(${actualAddr}/${planAddr}*10))`,
+            formula: `=ROUND(MAX(0, 10-(${actualAddr}/${planAddr}*10)),1)`,
             value: "",
         };
+
+        // write note "Hoàn thành x% kế hoạch"
+        if (noteColIdx != null && noteColIdx !== scoreColIdx) {
+            const noteAddr = `${numToCol(noteColIdx + 1)}${virtualRowNo}`;
+            newRow.cells[noteColIdx] = {
+                ...newRow.cells[noteColIdx],
+                addr: noteAddr,
+                input: false,
+                formula: `=ROUND((${actualAddr}/${planAddr})*100,1)`,
+                value: "",
+                suffix: "% kế hoạch", // Add suffix for display
+                prefix: "Hoàn thành ", // Add prefix for display
+            };
+        }
+
     } else if (isQualitativeCriterion) {
         // Special handling for qualitative criteria
         // Allow direct input of deduction points at "Score by completion level" column

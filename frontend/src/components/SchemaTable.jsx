@@ -323,24 +323,49 @@ export default function SchemaTable({
                                                 rawVal === ""
                                             )
                                                 return "";
+
+                                            let baseDisplay = "";
+
                                             if (percentCell) {
                                                 if (typeof rawVal === "number")
-                                                    return formatPercentVN(
-                                                        rawVal
-                                                    );
+                                                    baseDisplay =
+                                                        formatPercentVN(rawVal);
+                                                else {
+                                                    const n =
+                                                        toNumberAnyLocale(
+                                                            rawVal
+                                                        );
+                                                    if (
+                                                        n !== null &&
+                                                        !Number.isNaN(n)
+                                                    )
+                                                        baseDisplay =
+                                                            formatPercentVN(n);
+                                                    else
+                                                        baseDisplay =
+                                                            String(
+                                                                rawVal
+                                                            ).trim();
+                                                }
+                                            } else {
                                                 const n =
                                                     toNumberAnyLocale(rawVal);
                                                 if (
                                                     n !== null &&
                                                     !Number.isNaN(n)
                                                 )
-                                                    return formatPercentVN(n);
-                                                return String(rawVal).trim();
+                                                    baseDisplay =
+                                                        formatNumberVN(n);
+                                                else
+                                                    baseDisplay =
+                                                        String(rawVal).trim();
                                             }
-                                            const n = toNumberAnyLocale(rawVal);
-                                            if (n !== null && !Number.isNaN(n))
-                                                return formatNumberVN(n);
-                                            return String(rawVal).trim();
+
+                                            // Add prefix and suffix if cell has them
+                                            const prefix = cell?.prefix || "";
+                                            const suffix = cell?.suffix || "";
+
+                                            return `${prefix}${baseDisplay}${suffix}`;
                                         })();
 
                                         const isCriteriaColumn = cIdx === 1; // cột "Tiêu chí" là cột thứ 2 (B)

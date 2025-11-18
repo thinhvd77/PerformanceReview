@@ -228,7 +228,7 @@ export default function ActivityLogsTab() {
             dataIndex: "ipAddress",
             key: "ipAddress",
             width: 130,
-            render: (ip) => ip || "-",
+            render: (ip) => ip.replace("::ffff:", "") || "-",
         },
     ];
 
