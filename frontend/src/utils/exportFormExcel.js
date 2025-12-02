@@ -422,17 +422,21 @@ export default async function exportFormExcel({
                 if (typeof v === 'string') {
                     const m = v.trim().match(/^(-?\d+(?:\.\d+)?)\s*%$/);
                     if (m) {
+                        // String like "0.2%" -> 0.002 (so Excel 0% format shows 0.2%)
                         v = parseFloat(m[1]) / 100;
                     } else {
                         const n = Number(v);
                         if (!isNaN(n)) {
-                            // If user typed 80 meaning 80%
-                            v = n > 1 && n <= 100 ? n / 100 : n;
+                            // User typed a number in a percent cell (e.g., 0.2 meaning 0.2%)
+                            // Excel's 0% format multiplies by 100, so we need to divide by 100
+                            // to get the correct display: 0.2 -> 0.002 -> Excel shows "0.2%"
+                            v = n / 100;
                         }
                     }
                 } else if (typeof v === 'number') {
-                    // If number looks like 80 (meaning 80%), convert to 0.8
-                    if (v > 1 && v <= 100) v = v / 100;
+                    // Number in percent cell: divide by 100 so Excel's 0% format shows correctly
+                    // e.g., 0.2 (meaning 0.2%) -> 0.002 -> Excel shows "0.2%"
+                    v = v / 100;
                 }
             }
 
@@ -441,7 +445,8 @@ export default async function exportFormExcel({
             if (cell?.numFmt) {
                 xcell.numFmt = cell.numFmt;
             } else if (wantPercent) {
-                xcell.numFmt = '0%';
+                // Use 0.00% to show decimal percentages like 0.2%
+                xcell.numFmt = '0.00%';
             }
             xcell.font = { name: 'Times New Roman', size: 11 };
 

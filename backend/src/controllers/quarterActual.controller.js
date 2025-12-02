@@ -1,12 +1,8 @@
-import { AppDataSource } from "../config/database.js";
-import { QuarterActual } from "../entities/QuarterActual.js";
-
-const ALLOWED_FIELDS = [
-    "capital_growth_actual",
-    "loan_growth_actual",
-    "bad_loan_ratio_actual",
-    "group_2_loan_ratio_actual",
-];
+import {
+    getPreviousQuarterActualsService,
+    getQuarterActualsService,
+    saveQuarterActualsService,
+} from "../services/quarterActual.service.js";
 
 /**
  * Get quarter actuals for previous quarter
@@ -29,42 +25,8 @@ export const getPreviousQuarterActuals = async (req, res) => {
             });
         }
 
-        // Calculate previous quarter
-        let prevQuarter = quarter - 1;
-        let prevYear = year;
-
-        if (prevQuarter < 1) {
-            prevQuarter = 4;
-            prevYear = year - 1;
-        }
-
-        const repo = AppDataSource.getRepository(QuarterActual.options.name);
-        const record = await repo.findOne({
-            where: {
-                employee_code,
-                quarter: prevQuarter,
-                year: prevYear,
-            },
-        });
-
-        if (!record) {
-            return res.json({
-                previous_quarter: prevQuarter,
-                previous_year: prevYear,
-                actuals: null,
-            });
-        }
-
-        return res.json({
-            previous_quarter: prevQuarter,
-            previous_year: prevYear,
-            actuals: {
-                capital_growth_actual: record.capital_growth_actual,
-                loan_growth_actual: record.loan_growth_actual,
-                bad_loan_ratio_actual: record.bad_loan_ratio_actual,
-                group_2_loan_ratio_actual: record.group_2_loan_ratio_actual,
-            },
-        });
+        const result = await getPreviousQuarterActualsService(employee_code, quarter, year);
+        return res.json(result);
     } catch (err) {
         console.error("getPreviousQuarterActuals error:", err);
         return res.status(500).json({
@@ -77,8 +39,6 @@ export const getPreviousQuarterActuals = async (req, res) => {
 /**
  * Get all quarter actuals for a specific year
  * GET /api/quarter-actuals?year=2025&username=user123
- * If username is provided (admin use case), fetch data for that user
- * Otherwise, fetch data for authenticated user
  */
 export const getQuarterActuals = async (req, res) => {
     try {
@@ -96,45 +56,9 @@ export const getQuarterActuals = async (req, res) => {
             });
         }
 
-        // Use provided username (for admin) or current user's username
         const employee_code = username || currentUser;
-
-        const repo = AppDataSource.getRepository(QuarterActual.options.name);
-        const records = await repo.find({
-            where: {
-                employee_code,
-                year,
-            },
-            order: {
-                quarter: "ASC",
-            },
-        });
-
-        // Transform to metrics format for frontend
-        const metrics = {};
-
-        ALLOWED_FIELDS.forEach((field) => {
-            // Keep the field name with "_actual" suffix to match frontend expectations
-            metrics[field] = {
-                q1Actual: null,
-                q2Actual: null,
-                q3Actual: null,
-                q4Actual: null,
-            };
-        });
-
-        records.forEach((record) => {
-            const quarterKey = `q${record.quarter}Actual`;
-            ALLOWED_FIELDS.forEach((field) => {
-                if (record[field] !== null && record[field] !== undefined) {
-                    metrics[field][quarterKey] = parseFloat(record[field]);
-                }
-            });
-        });
-
-        return res.json({
-            data: metrics,
-        });
+        const result = await getQuarterActualsService(employee_code, year);
+        return res.json(result);
     } catch (err) {
         console.error("getQuarterActuals error:", err);
         return res.status(500).json({
@@ -144,6 +68,10 @@ export const getQuarterActuals = async (req, res) => {
     }
 };
 
+/**
+ * Save quarter actuals
+ * POST /api/quarter-actuals
+ */
 export const saveQuarterActuals = async (req, res) => {
     try {
         const currentUser = req.user?.username;
@@ -176,40 +104,8 @@ export const saveQuarterActuals = async (req, res) => {
             });
         }
 
-        // Use provided username (for admin) or current user's username
         const employee_code = username || currentUser;
-
-        const repo = AppDataSource.getRepository(QuarterActual.options.name);
-
-        let record = await repo.findOne({
-            where: {
-                employee_code,
-                quarter: parsedQuarter,
-                year: parsedYear,
-            },
-        });
-
-        if (!record) {
-            record = repo.create({
-                employee_code,
-                quarter: parsedQuarter,
-                year: parsedYear,
-            });
-        }
-
-        ALLOWED_FIELDS.forEach((field) => {
-            if (Object.prototype.hasOwnProperty.call(actuals, field)) {
-                const value = actuals[field];
-                if (value === null || value === undefined || value === "") {
-                    record[field] = null;
-                } else {
-                    const numeric = Number(value);
-                    record[field] = Number.isFinite(numeric) ? numeric : null;
-                }
-            }
-        });
-
-        const saved = await repo.save(record);
+        const saved = await saveQuarterActualsService(employee_code, parsedQuarter, parsedYear, actuals);
 
         return res.status(200).json({
             message: "Quarter actuals saved successfully",

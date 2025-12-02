@@ -1,6 +1,8 @@
 import ExcelJS from 'exceljs';
 import fs from 'fs';
 import path from 'path';
+import { AppDataSource } from '../config/database.js';
+import { FormTemplate } from '../entities/FormTemplate.js';
 
 const uploadDir = path.join(process.cwd(), 'uploads');
 
@@ -264,3 +266,59 @@ export const processExcelFile = async (file) => {
 
     return {title: schema.title, schema, jsonData};
 }
+
+/**
+ * Parse assigned groups from request body
+ * @param {Object} body - Request body
+ * @returns {Array|null} - Parsed groups array or null
+ */
+export const parseAssignedGroups = (body) => {
+    const { branchId, departmentId, positionId, assignedGroup, assignedGroups } = body || {};
+    let groups = null;
+
+    try {
+        if (assignedGroups) {
+            const parsed = typeof assignedGroups === 'string' ? JSON.parse(assignedGroups) : assignedGroups;
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                groups = parsed;
+            }
+        }
+        // Fallback: legacy single group
+        if (!groups) {
+            let group = null;
+            if (assignedGroup) {
+                group = typeof assignedGroup === 'string' ? JSON.parse(assignedGroup) : assignedGroup;
+            } else if (branchId && departmentId && positionId) {
+                group = { branchId, departmentId, positionId };
+            }
+            if (group) groups = [group];
+        }
+    } catch (_) {
+        // ignore parse error -> treat as null
+    }
+
+    return groups;
+};
+
+/**
+ * Save form template to database
+ * @param {Object} processedResult - Result from processExcelFile
+ * @param {Array|null} groups - Assigned groups
+ * @returns {Promise<Object>} - Saved form template entity
+ */
+export const saveFormTemplateService = async (processedResult, groups) => {
+    const repo = AppDataSource.getRepository(FormTemplate.options.name);
+    
+    const payload = { 
+        name: processedResult.title, 
+        schema: processedResult.schema 
+    };
+
+    if (groups && groups.length > 0) {
+        payload.assignedGroups = groups;
+        payload.assignedGroup = groups[0]; // keep legacy column for backward compatibility
+    }
+
+    const entity = repo.create(payload);
+    return repo.save(entity);
+};

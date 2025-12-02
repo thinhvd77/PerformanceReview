@@ -1,6 +1,7 @@
 import { AppDataSource } from "../config/database.js";
 import { QuarterPlan } from "../entities/QuarterPlan.js";
 import ExcelJS from "exceljs";
+import { parseNumber as parseNumericValue } from "../utils/helpers.js";
 
 /**
  * Import quarter plans from Excel file
@@ -94,11 +95,10 @@ export const importQuarterPlanFromExcel = async (filePath) => {
             continue;
         }
 
-        // Parse numeric values (handle null/empty)
+        // Parse numeric values using helper (returns null for invalid values)
         const parseNumber = (val) => {
             if (val === null || val === undefined || val === "") return null;
-            const num = Number(val);
-            return isNaN(num) ? null : num;
+            return parseNumericValue(val);
         };
 
         plans.push({
